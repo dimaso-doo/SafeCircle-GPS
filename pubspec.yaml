@@ -1,0 +1,31 @@
+name: safe_circle_gps
+description: Privacy-first family GPS location sharing MVP.
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  firebase_core: ^3.12.0
+  firebase_messaging: ^15.1.4
+  flutter_riverpod: ^2.5.3
+  in_app_purchase: ^3.2.1
+  supabase_flutter: ^2.6.0
+  google_maps_flutter: ^2.9.0
+  geolocator: ^13.0.1
+  battery_plus: ^6.2.1
+  intl: ^0.19.0
+  uuid: ^4.5.1
+  cupertino_icons: ^1.0.8
+  flutter_dotenv: ^5.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true

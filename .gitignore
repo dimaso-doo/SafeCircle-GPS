@@ -1,0 +1,21 @@
+.dart_tool/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+.dart_tool/
+ios/
+android/
+web/
+linux/
+macos/
+windows/
+android/.gradle
+
+# Local secrets
+.env
+
+# IDE files
+.idea/
+.vscode/
