@@ -57,11 +57,16 @@ cp .env.example .env
 
 3. Configure backend credentials in `.env` or use `--dart-define`.
 
+This repository is currently linked to project `Reachlyst`:
+
+- `SUPABASE_URL=https://hxqojiuavgmqrdkixiuc.supabase.co`
+- `SUPABASE_ANON_KEY` is prefilled in `/Users/home/Documents/GPS_Track_Mobile_APP/.env`
+
 Example `.env` values:
 
 ```env
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_URL=https://hxqojiuavgmqrdkixiuc.supabase.co
+SUPABASE_ANON_KEY=sb_publishable_your-key
 GOOGLE_MAPS_ANDROID_API_KEY=android_maps_key
 GOOGLE_MAPS_IOS_API_KEY=ios_maps_key
 APPLE_PREMIUM_SUBSCRIPTION_IDS=com.example.safecircle.premium.month
@@ -93,6 +98,8 @@ flutter run -d ios
 ```bash
 supabase db push
 ```
+
+Note: this environment currently does not yet have the SafeCircle tables because the Supabase CLI is not available here yet. Ensure migrations in `supabase/migrations/` are applied in your Supabase SQL editor once if `supabase db push` is not available.
 
 ### Push notifications and SOS setup
 
