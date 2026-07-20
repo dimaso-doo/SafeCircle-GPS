@@ -21,7 +21,7 @@ Future<void> main() async {
   try {
     await dotenv.load(fileName: '.env', mergeWith: const {});
   } catch (_) {
-    // Allow demo mode to run without a local .env file.
+    // Demo mode can still be explicitly enabled even without a local .env file.
   }
 
   if (AppConfig.runInDemoMode) {

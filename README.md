@@ -4,9 +4,10 @@ SafeCircle GPS is a privacy-first family location sharing app. This branch now i
 
 ## Demo-ready setup
 
-- If `.env` is missing Supabase keys, the app runs in demo mode automatically.
-- Demo mode uses an in-memory backend so the full UI flow can be reviewed on emulator/simulator.
-- No map keys or Firebase/Supabase credentials are required for the review mode.
+- App runs in **real Supabase/Firebase mode by default**.
+- Demo mode is available only when `SAFE_CIRCLE_DEMO_MODE=true`.
+- If `.env` is missing required keys and demo mode is off, app shows a clear configuration error on startup.
+- Demo mode still uses an in-memory backend for review when explicitly enabled.
 
 ## Required Flutter version
 

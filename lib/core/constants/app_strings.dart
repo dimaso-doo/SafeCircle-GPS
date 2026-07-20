@@ -61,7 +61,7 @@ class AppConfig {
   }
 
   static bool get runInDemoMode {
-    return demoMode || !hasSupabaseConfig;
+    return demoMode;
   }
 
   static const String appName = 'SafeCircle GPS';
