@@ -9,6 +9,14 @@ class AuthRepository {
 
   final SupabaseClient? _client;
 
+  SupabaseClient _ensureClient() {
+    final client = _client;
+    if (client == null) {
+      throw StateError('Supabase client is not configured.');
+    }
+    return client;
+  }
+
   AppUser? get currentUser {
     if (AppConfig.runInDemoMode) {
       return DemoBackend.shared.activeUser;
@@ -23,7 +31,7 @@ class AuthRepository {
     if (AppConfig.runInDemoMode) {
       return DemoBackend.shared.authStateStream().map((user) => user);
     }
-    return _client!.auth.onAuthStateChange.map((event) => event.session?.user).map((user) {
+    return _ensureClient().auth.onAuthStateChange.map((event) => event.session?.user).map((user) {
       if (user == null) return null;
       return _toAppUser(user.id, user.email, user.userMetadata?['display_name'] as String?);
     });
@@ -47,7 +55,7 @@ class AuthRepository {
       return;
     }
 
-    final response = await _client.auth.signUp(
+    final response = await _ensureClient().auth.signUp(
       email: email,
       password: password,
       data: {
@@ -74,10 +82,10 @@ class AuthRepository {
 
     final requestedName = displayName?.trim();
 
-    final existing = await _client.from('users').select('id, display_name').eq('id', userId).maybeSingle();
+    final existing = await _ensureClient().from('users').select('id, display_name').eq('id', userId).maybeSingle();
 
     if (existing == null) {
-      await _client.from('users').insert({
+      await _ensureClient().from('users').insert({
         'id': userId,
         'display_name': requestedName,
       });
@@ -85,7 +93,7 @@ class AuthRepository {
     }
 
     if (requestedName != null && requestedName.isNotEmpty) {
-      await _client.from('users').update({'display_name': requestedName}).eq('id', userId);
+      await _ensureClient().from('users').update({'display_name': requestedName}).eq('id', userId);
     }
   }
 
@@ -98,14 +106,14 @@ class AuthRepository {
       return;
     }
 
-    await _client.auth.signInWithPassword(email: email, password: password);
+    await _ensureClient().auth.signInWithPassword(email: email, password: password);
   }
 
   Future<void> forgotPassword(String email) async {
     if (AppConfig.runInDemoMode) {
       return;
     }
-    await _client.auth.resetPasswordForEmail(email);
+    await _ensureClient().auth.resetPasswordForEmail(email);
   }
 
   Future<void> signOut() async {
@@ -113,6 +121,6 @@ class AuthRepository {
       await DemoBackend.shared.signOut();
       return;
     }
-    await _client.auth.signOut();
+    await _ensureClient().auth.signOut();
   }
 }

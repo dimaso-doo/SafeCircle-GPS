@@ -76,6 +76,10 @@ class _LocationPermissionGateState extends ConsumerState<LocationPermissionGate>
                 }
               },
             );
+          default:
+            return const Center(
+              child: Text('Checking location permission status...'),
+            );
         }
       },
       loading: () => const Center(child: CircularProgressIndicator()),

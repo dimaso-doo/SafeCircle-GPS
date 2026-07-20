@@ -93,6 +93,7 @@ class UserSubscriptionState {
           'allow_sos': false,
           'allow_priority_updates': false,
         };
+    final plan = SubscriptionPlan.fromJson(rawPlan);
 
     return UserSubscriptionState(
       userId: json['user_id'] as String,
@@ -101,7 +102,8 @@ class UserSubscriptionState {
       subscriptionId: json['id'] as String? ?? '',
       expiresAt: expiresAtRaw == null ? null : DateTime.tryParse(expiresAtRaw as String),
       maxHistoryRetentionHours:
-          (json['max_history_retention_hours'] as num?)?.toInt() ?? planFromMaxHistoryRetention(rawPlan),
+          (json['max_history_retention_hours'] as num?)?.toInt() ??
+              planFromMaxHistoryRetention(plan),
       maxCircles: (json['max_circles'] as num?)?.toInt() ?? (rawPlan['max_circles'] as num?)?.toInt() ?? 1,
       maxMembersPerCircle:
           (json['max_members_per_circle'] as num?)?.toInt() ??
@@ -113,6 +115,5 @@ class UserSubscriptionState {
     );
   }
 
-  static int planFromMaxHistoryRetention(Map<String, dynamic> plan) =>
-      (plan['max_history_retention_hours'] as num?)?.toInt() ?? 24;
+  static int planFromMaxHistoryRetention(SubscriptionPlan plan) => plan.maxHistoryRetentionHours;
 }

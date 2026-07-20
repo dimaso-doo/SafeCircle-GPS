@@ -37,29 +37,12 @@ class SubscriptionRepository {
       'user_id': userId,
       'status': 'active',
       'plan': fallbackPlan.toJson(),
-      'max_circles': fallbackPlan.maxCircles,
-      'max_members_per_circle': fallbackPlan.maxMembersPerCircle,
-      'max_history_retention_hours': fallbackPlan.maxHistoryRetentionHours,
-      'allow_safe_zones': fallbackPlan.allowSafeZones,
-      'allow_sos': fallbackPlan.allowSos,
-      'allow_priority_updates': fallbackPlan.allowPriorityUpdates,
     });
   }
 
-  Future<UserSubscriptionState> _fallbackPlan() async {
+  Future<SubscriptionPlan> _fallbackPlan() async {
     final planRow = await _fallbackPlanClient();
-    return UserSubscriptionState.fromJson({
-      'id': '',
-      'user_id': '',
-      'status': 'active',
-      'plan': planRow.toJson(),
-      'max_circles': planRow.maxCircles,
-      'max_members_per_circle': planRow.maxMembersPerCircle,
-      'max_history_retention_hours': planRow.maxHistoryRetentionHours,
-      'allow_safe_zones': planRow.allowSafeZones,
-      'allow_sos': planRow.allowSos,
-      'allow_priority_updates': planRow.allowPriorityUpdates,
-    });
+    return planRow;
   }
 
   Future<SubscriptionPlan> _fallbackPlanClient() async {

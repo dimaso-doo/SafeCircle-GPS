@@ -73,19 +73,29 @@ class LocationRepository {
     }
 
     final client = _client!;
-    final query = client
+
+    final baseBuilder = client
         .from('location_updates')
         .select(
           'id, user_id, latitude, longitude, altitude, accuracy_meters, speed_mps, heading_degrees, battery_level, created_at',
         )
         .eq('user_id', userId)
-        .gte('created_at', from.toUtc().toIso8601String())
-        .order('created_at', ascending: false)
-        .limit(limit);
+        .gte('created_at', from.toUtc().toIso8601String());
 
-    final withTo = to == null ? query : query.lte('created_at', to.toUtc().toIso8601String());
-    final rows = await withTo;
-    return rows.map((row) => LocationUpdate.fromJson(row)).toList();
+    final rows = to == null
+        ? await baseBuilder
+        : await baseBuilder.lte('created_at', to.toUtc().toIso8601String());
+
+    rows.sort((a, b) {
+      final first = DateTime.tryParse(a['created_at'] as String? ?? '') ?? DateTime(1970);
+      final second = DateTime.tryParse(b['created_at'] as String? ?? '') ?? DateTime(1970);
+      return second.compareTo(first);
+    });
+
+    return rows
+        .take(limit)
+        .map((row) => LocationUpdate.fromJson(row))
+        .toList();
   }
 
   Future<Map<String, LocationUpdate>> fetchLatestLocationByUsers(List<String> userIds) async {

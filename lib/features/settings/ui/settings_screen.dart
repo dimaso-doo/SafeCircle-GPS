@@ -26,9 +26,9 @@ class SettingsScreen extends ConsumerWidget {
     final notificationSettings = ref.watch(notificationSettingsProvider);
 
     if (authState.user == null) {
-      return const Scaffold(
-        appBar: AppBar(title: Text('Settings')),
-        body: EmptyState(message: 'Sign in to manage settings.'),
+      return Scaffold(
+        appBar: AppBar(title: const Text('Settings')),
+        body: const EmptyState(message: 'Sign in to manage settings.'),
       );
     }
 
@@ -153,7 +153,6 @@ class _SettingsContent extends ConsumerWidget {
           value: settings.isPaused,
           title: const Text('Pause sharing now'),
           subtitle: const Text('Temporarily stop sending new updates without disabling consent.'),
-          enabled: settings.isSharingEnabled,
           onChanged: settings.isSharingEnabled
               ? (value) => ref.read(settingsControllerProvider).setPaused(value)
               : null,

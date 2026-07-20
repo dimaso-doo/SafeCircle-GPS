@@ -25,9 +25,9 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     final history = ref.watch(historyProvider);
 
     if (membersState is AsyncLoading) {
-      return const Scaffold(
-        appBar: AppBar(title: Text('Location History')),
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        appBar: AppBar(title: const Text('Location History')),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -40,9 +40,9 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
 
     final members = membersState.valueOrNull ?? const <CircleMember>[];
     if (members.isEmpty) {
-      return const Scaffold(
-        appBar: AppBar(title: Text('Location History')),
-        body: EmptyState(message: 'Join a circle to view member history.'),
+      return Scaffold(
+        appBar: AppBar(title: const Text('Location History')),
+        body: const EmptyState(message: 'Join a circle to view member history.'),
       );
     }
 

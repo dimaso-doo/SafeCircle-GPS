@@ -11,7 +11,7 @@ import '../../../repositories/notification_repository.dart';
 import '../../../repositories/sos_repository.dart';
 import '../../../features/auth/providers/auth_provider.dart';
 import '../../../features/subscription/providers/subscription_provider.dart';
-import '../../../models/notification_settings.dart';
+import '../../../models/notification_settings.dart' as app_notification_settings;
 
 enum SafeCircleNotificationType {
   sosAlert,
@@ -30,7 +30,8 @@ final sosRepositoryProvider = Provider<SosRepository>((ref) {
   return SosRepository(client);
 });
 
-final notificationSettingsProvider = FutureProvider<NotificationSettings>((ref) async {
+final notificationSettingsProvider =
+    FutureProvider<app_notification_settings.NotificationSettings>((ref) async {
   final user = ref.watch(authControllerProvider).user;
   if (user == null) return throw StateError('Not signed in');
   final repository = ref.watch(notificationRepositoryProvider);

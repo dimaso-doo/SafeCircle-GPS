@@ -472,12 +472,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           batterySavingMode: settings.isBatterySavingMode,
         )
         .listen((position) async {
-      final now = DateTime.now().toUtc();
-      if (_lastUploadAt != null &&
-          now.difference(_lastUploadAt!).inSeconds <
-              settings.effectiveUpdateIntervalSeconds) {
-        return;
-      }
+    final now = DateTime.now().toUtc();
+    if (_lastUploadAt != null &&
+        now.difference(_lastUploadAt!).inSeconds <
+            settings.effectiveUpdateIntervalSeconds) {
+      return;
+    }
       _lastUploadAt = now;
 
       try {
@@ -501,7 +501,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           batteryLevel: batteryLevel,
         );
 
-        final now = DateTime.now().toUtc();
         if (mounted) {
           setState(() {
             _memberLocations[user.id] = LocationUpdate(
@@ -536,8 +535,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     required String userId,
     required dynamic repository,
     required Duration interval,
-    required int _distanceFilterMeters,
+    required int distanceFilterMeters,
   }) async {
+    final _ = distanceFilterMeters;
     await _stopTrackingStream();
     _isTrackingSessionActive = true;
     if (mounted) {

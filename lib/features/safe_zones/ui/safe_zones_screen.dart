@@ -28,9 +28,9 @@ class _SafeZonesScreenState extends ConsumerState<SafeZonesScreen> {
     final subscriptionState = ref.watch(subscriptionStateProvider);
 
     return subscriptionState.when(
-      loading: () => const Scaffold(
-        appBar: AppBar(title: Text('Safe Zones')),
-        body: Center(child: CircularProgressIndicator()),
+      loading: () => Scaffold(
+        appBar: AppBar(title: const Text('Safe Zones')),
+        body: const Center(child: CircularProgressIndicator()),
       ),
       error: (error, _) => Scaffold(
         appBar: AppBar(title: const Text('Safe Zones')),

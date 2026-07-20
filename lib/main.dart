@@ -19,7 +19,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
-    await dotenv.load(fileName: '.env', mergeWith: const {});
+    await dotenv.load(fileName: '.env', mergeWith: const {}, isOptional: true);
   } catch (_) {
     // Demo mode can still be explicitly enabled even without a local .env file.
   }
@@ -44,10 +44,14 @@ Future<void> main() async {
     anonKey: AppConfig.supabaseAnonKey,
   ).initialize();
 
-  await Firebase.initializeApp();
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-  await FirebaseMessaging.instance
-      .setForegroundNotificationPresentationOptions(alert: true, badge: true, sound: true);
+  try {
+    await Firebase.initializeApp();
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    await FirebaseMessaging.instance
+        .setForegroundNotificationPresentationOptions(alert: true, badge: true, sound: true);
+  } catch (_) {
+    // Firebase is optional for demo and local review. Continue without push config.
+  }
 
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,

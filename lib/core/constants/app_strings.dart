@@ -4,6 +4,9 @@ class AppConfig {
   const AppConfig._();
 
   static String _fromConfig(String key, String fallback) {
+    if (!dotenv.isInitialized) {
+      return fallback;
+    }
     final envValue = dotenv.maybeGet(key);
     return envValue != null && envValue.trim().isNotEmpty ? envValue.trim() : fallback;
   }
