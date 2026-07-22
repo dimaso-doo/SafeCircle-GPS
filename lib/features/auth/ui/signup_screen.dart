@@ -51,6 +51,26 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
+  Future<void> _signUpWithGoogle() async {
+    if (ref.read(authControllerProvider).isLoading) return;
+
+    final success = await ref.read(authControllerProvider.notifier).signUpWithGoogle();
+
+    if (!mounted) return;
+
+    if (!success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(ref.read(authControllerProvider).errorMessage ?? 'Google sign-up failed.')),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Google account linked. You are now signed in.')),
+    );
+    Navigator.of(context).popUntil((route) => route.isFirst);
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(authControllerProvider);
@@ -88,6 +108,12 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       value == null || value.length < 6 ? 'Password must be at least 6 chars' : null,
                 ),
                 const SizedBox(height: 20),
+                PrimaryButton(
+                  label: 'Sign up with Google',
+                  isLoading: state.isLoading,
+                  onPressed: _signUpWithGoogle,
+                ),
+                const SizedBox(height: 12),
                 PrimaryButton(
                   label: 'Create account',
                   isLoading: state.isLoading,

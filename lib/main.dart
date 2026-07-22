@@ -34,8 +34,11 @@ Future<void> main() async {
   }
 
   if (!AppConfig.hasSupabaseConfig) {
-    runApp(const MaterialApp(
-        home: Scaffold(body: Center(child: Text('Missing Supabase configuration.')))));
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+    runApp(const MissingSupabaseConfigApp());
     return;
   }
 
@@ -59,4 +62,41 @@ Future<void> main() async {
   ]);
 
   runApp(const ProviderScope(child: SafeCircleApp()));
+}
+
+class MissingSupabaseConfigApp extends StatelessWidget {
+  const MissingSupabaseConfigApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        body: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Icon(Icons.warning_amber_rounded, size: 64, color: Colors.orange),
+                SizedBox(height: 16),
+                Text(
+                  'Missing Supabase configuration',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 12),
+                Text(
+                  'App is configured for production mode, but SUPABASE_URL and SUPABASE_ANON_KEY are not set in .env.\n\nAdd them, then restart the app:',
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 10),
+                SelectableText('SUPABASE_URL=...\nSUPABASE_ANON_KEY=...'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

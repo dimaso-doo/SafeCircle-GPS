@@ -27,16 +27,7 @@ create policy "Members can read shared location updates"
   on public.location_updates for select
   using (
     user_id = auth.uid()
-    or exists (
-      select 1
-      from public.circle_members viewer
-      join public.circle_members target
-        on viewer.circle_id = target.circle_id
-      where viewer.user_id = auth.uid()
-        and viewer.is_accepted = true
-        and target.user_id = user_id
-        and target.is_accepted = true
-    )
+    or private.shares_accepted_circle(public.location_updates.user_id)
   );
 
 alter table public.circle_members enable row level security;
@@ -45,13 +36,7 @@ drop policy if exists "Users can view members of accepted circles" on public.cir
 create policy "Users can view members of accepted circles"
   on public.circle_members for select
   using (
-    exists (
-      select 1
-      from public.circle_members viewer
-      where viewer.circle_id = circle_id
-        and viewer.user_id = auth.uid()
-        and viewer.is_accepted = true
-    )
+    private.is_accepted_circle_member(public.circle_members.circle_id)
   );
 
 alter table public.circles enable row level security;
@@ -60,13 +45,8 @@ drop policy if exists "Users can read own circles" on public.circles;
 create policy "Users can read own circles"
   on public.circles for select
   using (
-    exists (
-      select 1
-      from public.circle_members m
-      where m.circle_id = id
-        and m.user_id = auth.uid()
-        and m.is_accepted = true
-    )
+    owner_id = (select auth.uid())
+    or private.is_accepted_circle_member(public.circles.id)
   );
 
 do $$

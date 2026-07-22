@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../features/auth/providers/auth_provider.dart';
 import 'login_screen.dart';
 import 'signup_screen.dart';
 
-class WelcomeScreen extends StatelessWidget {
+class WelcomeScreen extends ConsumerWidget {
   const WelcomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(authControllerProvider);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Welcome to SafeCircle GPS')),
       body: Padding(
@@ -44,9 +48,26 @@ class WelcomeScreen extends StatelessWidget {
                 ));
               },
             ),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              child: state.isLoading ? const Text('Starting Google sign in...') : const Text('Sign up with Google'),
+              onPressed: state.isLoading
+                  ? null
+                  : () {
+                      ref.read(authControllerProvider.notifier).signUpWithGoogle().then((success) {
+                        if (!success && context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(ref.read(authControllerProvider).errorMessage ?? 'Google sign-up failed.'),
+                            ),
+                          );
+                        }
+                      });
+                    },
+            ),
             const SizedBox(height: 24),
             const Text(
-              'No background tracking is enabled in this MVP. You must explicitly share locations.',
+              'Background sharing is off by default. You can enable, pause, or stop it anytime.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 12, color: Colors.grey),
             ),

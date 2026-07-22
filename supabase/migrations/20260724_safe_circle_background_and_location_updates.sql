@@ -4,12 +4,12 @@
 alter table public.location_sharing_settings
   add column if not exists is_background_sharing_enabled boolean not null default false,
   add column if not exists update_interval_seconds integer not null default 30,
-  add column if not exists distance_filter_meters integer not null default 30,
+  add column if not exists distance_filter_meters integer not null default 100,
   add column if not exists is_battery_saving_mode boolean not null default false;
 
 alter table public.location_sharing_settings
   alter column update_interval_seconds set default 30,
-  alter column distance_filter_meters set default 30;
+  alter column distance_filter_meters set default 100;
 
 update public.location_sharing_settings
 set is_background_sharing_enabled = false
@@ -20,7 +20,7 @@ set update_interval_seconds = 30
 where update_interval_seconds is null;
 
 update public.location_sharing_settings
-set distance_filter_meters = 30
+set distance_filter_meters = 100
 where distance_filter_meters is null;
 
 update public.location_sharing_settings

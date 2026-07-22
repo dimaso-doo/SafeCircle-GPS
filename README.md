@@ -59,20 +59,30 @@ cp .env.example .env
 
 This repository is currently linked to project `Reachlyst`:
 
-- `SUPABASE_URL=https://hxqojiuavgmqrdkixiuc.supabase.co`
+- `SUPABASE_URL=https://bwiihydbnoroaiqpglco.supabase.co`
 - `SUPABASE_ANON_KEY` is prefilled in `/Users/home/Documents/GPS_Track_Mobile_APP/.env`
 
 Example `.env` values:
 
 ```env
-SUPABASE_URL=https://hxqojiuavgmqrdkixiuc.supabase.co
+SUPABASE_URL=https://bwiihydbnoroaiqpglco.supabase.co
 SUPABASE_ANON_KEY=sb_publishable_your-key
 GOOGLE_MAPS_ANDROID_API_KEY=android_maps_key
 GOOGLE_MAPS_IOS_API_KEY=ios_maps_key
 APPLE_PREMIUM_SUBSCRIPTION_IDS=com.example.safecircle.premium.month
 GOOGLE_PREMIUM_SUBSCRIPTION_IDS=premium_month
 SAFE_CIRCLE_DEMO_MODE=false
+SUPABASE_OAUTH_REDIRECT_SCHEME=com.safecircle.gps
 ```
+
+### Built-in demo account (auto-seeded)
+
+For faster review runs in demo mode, use:
+
+- Email: `demo@safe-circle.local`
+- Password: `demo1234`
+
+In demo mode, this account is available immediately without creating a new user.
 
 4. (Optional) run with explicit defines:
 
@@ -101,6 +111,29 @@ supabase db push
 
 Note: this environment currently does not yet have the SafeCircle tables because the Supabase CLI is not available here yet. Ensure migrations in `supabase/migrations/` are applied in your Supabase SQL editor once if `supabase db push` is not available.
 
+### Google sign-up/sign-in setup (Google OAuth)
+
+To enable **Sign up with Google**:
+
+1. In Supabase Dashboard → Authentication → Providers:
+   - Enable `Google`.
+   - Add `Client ID` and `Client Secret` from Google Cloud OAuth credentials.
+2. In Google Cloud Console:
+   - Create OAuth consent screen and publish test settings.
+   - Create OAuth client for Android:
+     - Package name: `com.safecircle.gps`
+     - Add debug SHA-1/SHA-256 fingerprints for your signing keys.
+   - Create OAuth client for iOS:
+     - Bundle ID: `com.safecircle.gps`
+   - Add authorized redirect URI/callbacks handled through app scheme:
+     - `com.safecircle.gps://login-callback/`
+3. In `.env`/`--dart-define`, set:
+   - `SUPABASE_OAUTH_REDIRECT_SCHEME=com.safecircle.gps`
+4. Update platform files already included in this branch:
+   - Android intent filter in `android/app/src/main/AndroidManifest.xml`
+   - iOS URL scheme in `ios/Runner/Info.plist`
+5. Restart app after `flutter clean` and `flutter pub get` once credentials are set.
+
 ### Push notifications and SOS setup
 
 1. Add Firebase platform config to your project from Firebase console:
@@ -109,7 +142,7 @@ Note: this environment currently does not yet have the SafeCircle tables because
 2. Set Edge Function secrets:
    - `SUPABASE_URL`
    - `SUPABASE_SERVICE_ROLE_KEY`
-   - `FCM_SERVER_KEY` (Firebase Cloud Messaging server key)
+   - `FIREBASE_SERVICE_ACCOUNT` (complete Firebase service-account JSON)
 3. Deploy the notification function:
 
 ```bash

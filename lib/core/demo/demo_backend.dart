@@ -17,7 +17,9 @@ import '../../models/user_profile.dart';
 import '../../models/user_subscription.dart';
 
 class DemoBackend {
-  DemoBackend._();
+  DemoBackend._() {
+    _ensureDemoSeedAccount();
+  }
 
   static final DemoBackend shared = DemoBackend._();
 
@@ -47,12 +49,17 @@ class DemoBackend {
   final Map<String, double> _markerOffsetLatByUser = {};
   final Map<String, double> _markerOffsetLonByUser = {};
 
+  static const String _demoEmail = 'demo@safe-circle.local';
+  static const String _demoPassword = 'demo1234';
+  static const String _demoDisplayName = 'Demo User';
+
   Stream<AppUser?> authStateStream() => _authStreamController.stream;
 
   AppUser? get activeUser => _activeUser;
 
   List<String> getCircleIdsForUser(String userId) {
-    return List<String>.from(_membershipCircleIdsByUser[userId] ?? const <String>[]);
+    return List<String>.from(
+        _membershipCircleIdsByUser[userId] ?? const <String>[]);
   }
 
   String? getCircleIdForSafeZone(String zoneId) {
@@ -91,7 +98,8 @@ class DemoBackend {
     final user = AppUser(
       id: id,
       email: normalizedEmail,
-      displayName: displayName?.trim().isNotEmpty == true ? displayName!.trim() : null,
+      displayName:
+          displayName?.trim().isNotEmpty == true ? displayName!.trim() : null,
     );
     _activeUser = user;
     _profilesById[id] = UserProfile(id: id, displayName: displayName?.trim());
@@ -106,6 +114,7 @@ class DemoBackend {
     required String email,
     required String password,
   }) async {
+    _ensureDemoSeedAccount();
     final normalizedEmail = email.trim().toLowerCase();
     final userId = _credentialsByEmail[normalizedEmail];
     if (userId == null || _passwordByUserId[userId] != password) {
@@ -136,7 +145,8 @@ class DemoBackend {
     );
     final current = _activeUser;
     if (current != null && current.id == userId) {
-      _activeUser = AppUser(id: current.id, email: current.email, displayName: displayName);
+      _activeUser = AppUser(
+          id: current.id, email: current.email, displayName: displayName);
       _authStreamController.add(_activeUser);
     }
   }
@@ -159,7 +169,8 @@ class DemoBackend {
     _zonesByCircle[id] = <SafeZone>[];
     _safeZoneEventsByCircle[id] = <_LocationSeed>[];
 
-    addMemberToCircle(circleId: id, userId: ownerId, role: 'owner', isAccepted: true);
+    addMemberToCircle(
+        circleId: id, userId: ownerId, role: 'owner', isAccepted: true);
     return id;
   }
 
@@ -196,7 +207,8 @@ class DemoBackend {
     if (circleId == null) {
       throw StateError('Invalid invite code.');
     }
-    addMemberToCircle(circleId: circleId, userId: userId, role: 'member', isAccepted: true);
+    addMemberToCircle(
+        circleId: circleId, userId: userId, role: 'member', isAccepted: true);
   }
 
   void addMemberToCircle({
@@ -210,9 +222,14 @@ class DemoBackend {
       return;
     }
     members.add(userId);
-    _membershipCircleIdsByUser.putIfAbsent(userId, () => <String>{}).add(circleId);
-    _demoCircleMembershipUsers.putIfAbsent(circleId, () => <String>{}).add(userId);
-    if (_circlesById.containsKey(circleId) && _zonesByCircle[circleId] == null) {
+    _membershipCircleIdsByUser
+        .putIfAbsent(userId, () => <String>{})
+        .add(circleId);
+    _demoCircleMembershipUsers
+        .putIfAbsent(circleId, () => <String>{})
+        .add(userId);
+    if (_circlesById.containsKey(circleId) &&
+        _zonesByCircle[circleId] == null) {
       _zonesByCircle[circleId] = <SafeZone>[];
     }
     _ensureSeedPositions(userId);
@@ -267,7 +284,8 @@ class DemoBackend {
     return _settingsByUser[userId]!;
   }
 
-  Future<LocationSharingSettings> upsertSettings(String userId, LocationSharingSettings next) async {
+  Future<LocationSharingSettings> upsertSettings(
+      String userId, LocationSharingSettings next) async {
     _settingsByUser[userId] = next;
     return next;
   }
@@ -423,14 +441,16 @@ class DemoBackend {
       heading: position.heading,
       createdAt: now,
     );
-    final history = _locationUpdatesByUser.putIfAbsent(userId, () => <LocationUpdate>[]);
+    final history =
+        _locationUpdatesByUser.putIfAbsent(userId, () => <LocationUpdate>[]);
     history.insert(0, entry);
     if (history.length > 400) {
       history.removeRange(400, history.length);
     }
   }
 
-  Future<List<LocationUpdate>> fetchHistory(String userId, {int limit = 100}) async {
+  Future<List<LocationUpdate>> fetchHistory(String userId,
+      {int limit = 100}) async {
     final history = _locationUpdatesByUser[userId] ?? const <LocationUpdate>[];
     final size = history.length.clamp(0, limit);
     return history.take(size).toList(growable: false);
@@ -445,13 +465,15 @@ class DemoBackend {
     final history = _locationUpdatesByUser[userId] ?? const <LocationUpdate>[];
     final upper = to ?? DateTime.now();
     final filtered = history.where((row) {
-      return !row.createdAt.isBefore(from.toUtc()) && !row.createdAt.isAfter(upper.toUtc());
+      return !row.createdAt.isBefore(from.toUtc()) &&
+          !row.createdAt.isAfter(upper.toUtc());
     }).toList(growable: false);
     final max = limit.clamp(0, filtered.length);
     return filtered.take(max).toList(growable: false);
   }
 
-  Future<Map<String, LocationUpdate>> fetchLatestLocationByUsers(List<String> userIds) async {
+  Future<Map<String, LocationUpdate>> fetchLatestLocationByUsers(
+      List<String> userIds) async {
     final result = <String, LocationUpdate>{};
     for (final userId in userIds) {
       if (result.containsKey(userId)) continue;
@@ -514,7 +536,9 @@ class DemoBackend {
       id: original.id,
       circleId: original.circleId,
       createdBy: original.createdBy,
-      targetUserId: clearTargetUser == true ? null : (targetUserId ?? original.targetUserId),
+      targetUserId: clearTargetUser == true
+          ? null
+          : (targetUserId ?? original.targetUserId),
       name: name?.trim().isEmpty == false ? name!.trim() : original.name,
       centerLatitude: centerLatitude ?? original.centerLatitude,
       centerLongitude: centerLongitude ?? original.centerLongitude,
@@ -549,7 +573,9 @@ class DemoBackend {
     );
     final circleId = _findCircleIdForZone(zoneId);
     if (circleId == null) return;
-    _safeZoneEventsByCircle.putIfAbsent(circleId, () => <_LocationSeed>[]).add(record);
+    _safeZoneEventsByCircle
+        .putIfAbsent(circleId, () => <_LocationSeed>[])
+        .add(record);
   }
 
   Future<UserSubscriptionState> getSubscription(String userId) async {
@@ -616,14 +642,16 @@ class DemoBackend {
     final members = _memberIdsByCircle[circleId] ?? const <String>[];
     for (final userId in members) {
       _ensureSeedPositions(userId);
-      uploadLocationUpdate(userId: userId, position: _nextDemoPositionFor(userId))
+      uploadLocationUpdate(
+              userId: userId, position: _nextDemoPositionFor(userId))
           .catchError((_) {});
     }
   }
 
   void seedLatestForUser(String userId) {
     _ensureSeedPositions(userId);
-    uploadLocationUpdate(userId: userId, position: _nextDemoPositionFor(userId)).catchError((_) {});
+    uploadLocationUpdate(userId: userId, position: _nextDemoPositionFor(userId))
+        .catchError((_) {});
   }
 
   LocationUpdate? latestLocationFor(String userId) {
@@ -660,12 +688,28 @@ class DemoBackend {
     }
   }
 
+  void _ensureDemoSeedAccount() {
+    if (_credentialsByEmail.containsKey(_demoEmail)) {
+      return;
+    }
+
+    final id = _uuid.v4();
+    _credentialsByEmail[_demoEmail] = id;
+    _passwordByUserId[id] = _demoPassword;
+    _profilesById[id] = UserProfile(id: id, displayName: _demoDisplayName);
+    _seedDefaultSettings(id);
+    _seedDefaultNotificationSettings(id);
+    _seedDefaultSubscription(id);
+    _ensureSeedPositions(id);
+  }
+
   String _newInviteCode() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     final random = Random.secure();
     String code;
     do {
-      code = List.generate(7, (_) => chars[random.nextInt(chars.length)]).join();
+      code =
+          List.generate(7, (_) => chars[random.nextInt(chars.length)]).join();
     } while (_circleIdByInviteCode.containsKey(code));
     return code;
   }
@@ -718,10 +762,13 @@ class DemoBackend {
       isPaused: isPaused ?? current.isPaused,
       isBackgroundSharingEnabled:
           isBackgroundSharingEnabled ?? current.isBackgroundSharingEnabled,
-      updateIntervalSeconds: updateIntervalSeconds ?? current.updateIntervalSeconds,
-      distanceFilterMeters: distanceFilterMeters ?? current.distanceFilterMeters,
+      updateIntervalSeconds:
+          updateIntervalSeconds ?? current.updateIntervalSeconds,
+      distanceFilterMeters:
+          distanceFilterMeters ?? current.distanceFilterMeters,
       isBatterySavingMode: isBatterySavingMode ?? current.isBatterySavingMode,
-      historyRetentionHours: historyRetentionHours ?? current.historyRetentionHours,
+      historyRetentionHours:
+          historyRetentionHours ?? current.historyRetentionHours,
       updatedAt: DateTime.now().toUtc(),
     );
   }

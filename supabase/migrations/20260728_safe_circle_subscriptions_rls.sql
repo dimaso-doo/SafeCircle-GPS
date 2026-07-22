@@ -128,7 +128,7 @@ create or replace function public.user_allows_feature(
 returns boolean
 language plpgsql stable as $function$
   declare
-    v_limits public.user_subscription_limits%rowtype;
+    v_limits record;
   begin
     select * into v_limits from public.user_subscription_limits(p_user_id);
 
@@ -202,7 +202,7 @@ create or replace function public.enforce_circle_creation_limit()
 returns trigger
 language plpgsql as $function$
   declare
-    v_limits public.user_subscription_limits%rowtype;
+    v_limits record;
     v_count int;
   begin
     select * into v_limits from public.user_subscription_limits(NEW.owner_id);
@@ -223,7 +223,7 @@ create or replace function public.enforce_circle_membership_limit()
 returns trigger
 language plpgsql as $function$
   declare
-    v_limits public.user_subscription_limits%rowtype;
+    v_limits record;
     v_circle_count int;
     v_user_count int;
   begin
@@ -259,7 +259,7 @@ create or replace function public.enforce_location_sharing_settings_limit()
 returns trigger
 language plpgsql as $function$
   declare
-    v_limits public.user_subscription_limits%rowtype;
+    v_limits record;
   begin
     select * into v_limits from public.user_subscription_limits(NEW.user_id);
 

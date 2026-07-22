@@ -31,9 +31,19 @@ class AuthRepository {
     if (AppConfig.runInDemoMode) {
       return DemoBackend.shared.authStateStream().map((user) => user);
     }
-    return _ensureClient().auth.onAuthStateChange.map((event) => event.session?.user).map((user) {
-      if (user == null) return null;
-      return _toAppUser(user.id, user.email, user.userMetadata?['display_name'] as String?);
+    return _ensureClient().auth.onAuthStateChange.asyncMap((event) async {
+      final user = event.session?.user;
+      if (user == null) {
+        return null;
+      }
+      final profileName =
+          user.userMetadata?['display_name'] as String? ??
+          user.userMetadata?['name'] as String? ??
+          user.userMetadata?['full_name'] as String? ??
+          (user.email?.split('@').first);
+
+      await ensureUserProfile(user.id, profileName);
+      return _toAppUser(user.id, user.email, profileName);
     });
   }
 
@@ -107,6 +117,25 @@ class AuthRepository {
     }
 
     await _ensureClient().auth.signInWithPassword(email: email, password: password);
+  }
+
+  Future<void> signInWithGoogle() async {
+    if (AppConfig.runInDemoMode) {
+      throw StateError('Google sign-in is not available in demo mode.');
+    }
+
+    final redirectScheme = AppConfig.supabaseOAuthRedirectScheme.trim();
+    final redirectTo = redirectScheme.isEmpty
+        ? null
+        : '${redirectScheme}://login-callback/';
+
+    await _ensureClient().auth.signInWithOAuth(
+      OAuthProvider.google,
+      redirectTo: redirectTo,
+      queryParams: const {
+        'prompt': 'select_account',
+      },
+    );
   }
 
   Future<void> forgotPassword(String email) async {

@@ -1,4 +1,5 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.0';
+import { createClient } from 'npm:@supabase/supabase-js@2.49.0';
+import { JWT } from 'npm:google-auth-library@9.15.1';
 
 type NotificationType = 'sosAlert' | 'safeZoneEnter' | 'safeZoneExit' | 'sharingPaused';
 
@@ -33,8 +34,6 @@ const CORS = {
   'Access-Control-Allow-Headers': 'authorization, content-type',
 };
 
-const FCM_ENDPOINT = 'https://fcm.googleapis.com/fcm/send';
-
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: CORS });
@@ -61,9 +60,16 @@ Deno.serve(async (req) => {
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const serviceRole = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  const fcmServerKey = Deno.env.get('FCM_SERVER_KEY');
-  if (!supabaseUrl || !serviceRole || !fcmServerKey) {
+  const serviceAccountJson = Deno.env.get('FIREBASE_SERVICE_ACCOUNT');
+  if (!supabaseUrl || !serviceRole || !serviceAccountJson) {
     return jsonResponse({ error: 'Server configuration missing.' }, 500);
+  }
+
+  let serviceAccount: { project_id: string; client_email: string; private_key: string };
+  try {
+    serviceAccount = JSON.parse(serviceAccountJson);
+  } catch (_) {
+    return jsonResponse({ error: 'Invalid Firebase service account configuration.' }, 500);
   }
 
   const supabase = createClient(supabaseUrl, serviceRole);
@@ -172,6 +178,9 @@ Deno.serve(async (req) => {
   const failedTokens: string[] = [];
 
   if (tokenPayload.length > 0) {
+    const accessToken = await getFirebaseAccessToken(serviceAccount);
+    const fcmEndpoint =
+      `https://fcm.googleapis.com/v1/projects/${serviceAccount.project_id}/messages:send`;
     const pushMessage = {
       title,
       body: messageBody,
@@ -190,20 +199,23 @@ Deno.serve(async (req) => {
 
     await Promise.all(
       tokenPayload.map(async (token) => {
-        const res = await fetch(FCM_ENDPOINT, {
+        const res = await fetch(fcmEndpoint, {
           method: 'POST',
           headers: {
-            Authorization: `key=${fcmServerKey}`,
+            Authorization: `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            to: token,
-            priority: 'high',
-            notification: {
-              title: pushMessage.title,
-              body: pushMessage.body,
+            message: {
+              token,
+              notification: {
+                title: pushMessage.title,
+                body: pushMessage.body,
+              },
+              data: pushMessage.data,
+              android: { priority: 'HIGH' },
+              apns: { headers: { 'apns-priority': '10' } },
             },
-            data: pushMessage.data,
           }),
         });
 
@@ -212,13 +224,7 @@ Deno.serve(async (req) => {
           return;
         }
 
-        const result = await res.json().catch(() => ({}));
-        if ((result?.success ?? 0) >= 1) {
-          sent += 1;
-          return;
-        }
-
-        failedTokens.push(token);
+        sent += 1;
       }),
     );
   }
@@ -231,6 +237,20 @@ Deno.serve(async (req) => {
     failed_tokens: failedTokens,
   });
 });
+
+async function getFirebaseAccessToken(serviceAccount: {
+  client_email: string;
+  private_key: string;
+}): Promise<string> {
+  const client = new JWT({
+    email: serviceAccount.client_email,
+    key: serviceAccount.private_key,
+    scopes: ['https://www.googleapis.com/auth/firebase.messaging'],
+  });
+  const credentials = await client.authorize();
+  if (!credentials.access_token) throw new Error('Firebase access token was not issued.');
+  return credentials.access_token;
+}
 
 function isNotificationType(value: string): value is NotificationType {
   return value === 'sosAlert' || value === 'safeZoneEnter' || value === 'safeZoneExit' || value === 'sharingPaused';

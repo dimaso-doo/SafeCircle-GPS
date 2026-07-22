@@ -3,6 +3,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 class AppConfig {
   const AppConfig._();
 
+  static bool _forcedDemoMode = false;
+
   static String _fromConfig(String key, String fallback) {
     if (!dotenv.isInitialized) {
       return fallback;
@@ -50,7 +52,15 @@ class AppConfig {
         const String.fromEnvironment('GOOGLE_PREMIUM_SUBSCRIPTION_IDS', defaultValue: ''),
       );
 
+  static String get supabaseOAuthRedirectScheme => _fromConfig(
+        'SUPABASE_OAUTH_REDIRECT_SCHEME',
+        const String.fromEnvironment('SUPABASE_OAUTH_REDIRECT_SCHEME', defaultValue: 'com.safecircle.gps'),
+      );
+
   static bool get demoMode {
+    if (_forcedDemoMode) {
+      return true;
+    }
     return _toBool(
       _fromConfig(
         'SAFE_CIRCLE_DEMO_MODE',
@@ -65,6 +75,10 @@ class AppConfig {
 
   static bool get runInDemoMode {
     return demoMode;
+  }
+
+  static void forceDemoMode() {
+    _forcedDemoMode = true;
   }
 
   static const String appName = 'SafeCircle GPS';

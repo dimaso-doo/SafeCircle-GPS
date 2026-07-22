@@ -27,6 +27,48 @@ alter table public.circles
 alter table public.circle_members
   add column if not exists is_accepted boolean not null default false;
 
+create schema if not exists private;
+
+create or replace function private.is_accepted_circle_member(p_circle_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select (select auth.uid()) is not null and exists (
+    select 1
+    from public.circle_members cm
+    where cm.circle_id = p_circle_id
+      and cm.user_id = (select auth.uid())
+      and cm.is_accepted = true
+  );
+$$;
+
+create or replace function private.shares_accepted_circle(p_target_user_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select (select auth.uid()) is not null and exists (
+    select 1
+    from public.circle_members viewer
+    join public.circle_members target on target.circle_id = viewer.circle_id
+    where viewer.user_id = (select auth.uid())
+      and viewer.is_accepted = true
+      and target.user_id = p_target_user_id
+      and target.is_accepted = true
+  );
+$$;
+
+revoke all on function private.is_accepted_circle_member(uuid) from public, anon;
+revoke all on function private.shares_accepted_circle(uuid) from public, anon;
+grant usage on schema private to authenticated;
+grant execute on function private.is_accepted_circle_member(uuid) to authenticated;
+grant execute on function private.shares_accepted_circle(uuid) to authenticated;
+
 -- Keep one membership per user per circle.
 alter table public.circle_members
   drop constraint if exists circle_members_user_id_circle_id_key;
@@ -153,9 +195,7 @@ returns trigger
 language plpgsql as $$
 begin
   insert into public.circle_members(circle_id, user_id, role, is_accepted, invited_at)
-  values (NEW.id, NEW.owner_id, 'owner', true, timezone('utc', now()))
-  on conflict (circle_id, user_id)
-  do update set is_accepted = true, role = 'owner';
+  values (NEW.id, NEW.owner_id, 'owner', true, timezone('utc', now()));
   return NEW;
 end
 $$;
@@ -183,6 +223,8 @@ drop policy if exists "Users can view members of accepted circles" on public.cir
 drop policy if exists "Users can add memberships" on public.circle_members;
 drop policy if exists "Users can add their own membership" on public.circle_members;
 drop policy if exists "Users can update own membership" on public.circle_members;
+drop policy if exists "Users manage own memberships" on public.circle_members;
+drop policy if exists "Users can read memberships in their circles" on public.circle_members;
 
 
 drop policy if exists "Users can add location updates" on public.location_updates;
@@ -205,15 +247,7 @@ begin
   create policy "Users can read peer profiles"
     on public.users for select
     using (
-      exists (
-        select 1
-        from public.circle_members viewer
-        join public.circle_members target on viewer.circle_id = target.circle_id
-        where viewer.user_id = auth.uid()
-          and viewer.is_accepted = true
-          and target.user_id = id
-          and target.is_accepted = true
-      )
+      private.shares_accepted_circle(public.users.id)
     );
 
   create policy "Users can insert own profile"
@@ -232,13 +266,8 @@ begin
   create policy "Users can read own circles"
     on public.circles for select
     using (
-      exists (
-        select 1
-        from public.circle_members m
-        where m.circle_id = id
-          and m.user_id = auth.uid()
-          and m.is_accepted = true
-      )
+      owner_id = (select auth.uid())
+      or private.is_accepted_circle_member(public.circles.id)
     );
 
   create policy "Owners can update own circles"
@@ -249,13 +278,7 @@ begin
   create policy "Users can view members of accepted circles"
     on public.circle_members for select
     using (
-      exists (
-        select 1
-        from public.circle_members viewer
-        where viewer.circle_id = circle_id
-          and viewer.user_id = auth.uid()
-          and viewer.is_accepted = true
-      )
+      private.is_accepted_circle_member(public.circle_members.circle_id)
     );
 
   create policy "Users can add memberships"
@@ -275,16 +298,7 @@ begin
     on public.location_updates for select
     using (
       user_id = auth.uid()
-      or exists (
-        select 1
-        from public.circle_members viewer
-        join public.circle_members target
-          on viewer.circle_id = target.circle_id
-        where viewer.user_id = auth.uid()
-          and viewer.is_accepted = true
-          and target.user_id = user_id
-          and target.is_accepted = true
-      )
+      or private.shares_accepted_circle(public.location_updates.user_id)
     );
 
   create policy "Users can read own sharing settings"

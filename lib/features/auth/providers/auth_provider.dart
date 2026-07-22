@@ -59,6 +59,21 @@ class AuthController extends StateNotifier<AuthState> {
     }
   }
 
+  Future<bool> signInWithGoogle() async {
+    state = state.copyWith(isLoading: true, errorMessage: null);
+    try {
+      await repository.signInWithGoogle();
+      return true;
+    } catch (error) {
+      state = state.copyWith(isLoading: false, errorMessage: error.toString());
+      return false;
+    }
+  }
+
+  Future<bool> signUpWithGoogle() async {
+    return signInWithGoogle();
+  }
+
   Future<bool> signUp({
     required String email,
     required String password,
