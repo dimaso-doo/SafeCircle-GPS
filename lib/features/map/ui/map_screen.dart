@@ -823,6 +823,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     List<CircleMember> members,
     List<SafeZone> safeZones,
   ) {
+    if (!AppConfig.hasGoogleMapsConfig) {
+      return _mapPreviewWithoutApiKey(currentPosition, members);
+    }
+
     final markers = _buildMarkers(currentPosition, members);
     final safeZoneCircles = _buildSafeZoneCircles(safeZones);
     LatLng start;
@@ -847,6 +851,127 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       myLocationButtonEnabled: true,
       markers: markers,
       circles: safeZoneCircles,
+    );
+  }
+
+  Widget _mapPreviewWithoutApiKey(
+    Position? currentPosition,
+    List<CircleMember> members,
+  ) {
+    final memberById = {for (final member in members) member.userId: member};
+    final locations = _memberLocations.entries.toList(growable: false);
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Theme.of(context).colorScheme.primaryContainer,
+            Theme.of(context).colorScheme.surface,
+          ],
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.map_outlined,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'Live map preview is active. Google map tiles will appear after the platform API key is connected.',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface.withOpacity(0.72),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                    ),
+                  ),
+                  child: locations.isEmpty && currentPosition == null
+                      ? const Center(
+                          child: EmptyState(
+                            message: 'Waiting for shared member locations.',
+                          ),
+                        )
+                      : ListView.separated(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: locations.isNotEmpty ? locations.length : 1,
+                          separatorBuilder: (_, __) => const SizedBox(height: 10),
+                          itemBuilder: (context, index) {
+                            if (locations.isEmpty) {
+                              return _locationPreviewTile(
+                                name: 'You',
+                                latitude: currentPosition!.latitude,
+                                longitude: currentPosition.longitude,
+                                isCurrentUser: true,
+                              );
+                            }
+
+                            final entry = locations[index];
+                            final member = memberById[entry.key];
+                            final currentUserId = ref.read(authControllerProvider).user?.id;
+                            final isCurrentUser = entry.key == currentUserId;
+                            final name = isCurrentUser
+                                ? 'You'
+                                : member?.displayName?.trim().isNotEmpty == true
+                                    ? member!.displayName!.trim()
+                                    : 'Circle member';
+                            return _locationPreviewTile(
+                              name: name,
+                              latitude: entry.value.latitude,
+                              longitude: entry.value.longitude,
+                              isCurrentUser: isCurrentUser,
+                            );
+                          },
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _locationPreviewTile({
+    required String name,
+    required double latitude,
+    required double longitude,
+    required bool isCurrentUser,
+  }) {
+    return ListTile(
+      tileColor: Theme.of(context).colorScheme.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      leading: CircleAvatar(
+        child: Icon(isCurrentUser ? Icons.my_location : Icons.location_on),
+      ),
+      title: Text(name),
+      subtitle: Text(
+        '${latitude.toStringAsFixed(5)}, ${longitude.toStringAsFixed(5)}',
+      ),
+      trailing: const Icon(Icons.circle, size: 12, color: Colors.green),
     );
   }
 

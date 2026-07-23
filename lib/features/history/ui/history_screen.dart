@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/constants/app_strings.dart';
 import '../../../core/widgets/empty_states.dart';
 import '../../../features/auth/providers/auth_provider.dart';
 import '../../../features/circles/models/circle_member.dart';
@@ -103,16 +104,45 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                   children: [
                     SizedBox(
                       height: 280,
-                      child: GoogleMap(
-                        initialCameraPosition: CameraPosition(
-                          target: LatLng(center.latitude, center.longitude),
-                          zoom: 14,
-                        ),
-                        markers: markers,
-                        polylines: polyline,
-                        myLocationEnabled: false,
-                        myLocationButtonEnabled: false,
-                      ),
+                      child: AppConfig.hasGoogleMapsConfig
+                          ? GoogleMap(
+                              initialCameraPosition: CameraPosition(
+                                target: LatLng(center.latitude, center.longitude),
+                                zoom: 14,
+                              ),
+                              markers: markers,
+                              polylines: polyline,
+                              myLocationEnabled: false,
+                              myLocationButtonEnabled: false,
+                            )
+                          : Container(
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.primaryContainer,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.route, size: 48),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    '${ordered.length} secure location points',
+                                    style: Theme.of(context).textTheme.titleMedium,
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Latest: ${center.latitude.toStringAsFixed(5)}, ${center.longitude.toStringAsFixed(5)}',
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  const Text(
+                                    'Route map tiles will appear after the Google Maps API key is connected.',
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            ),
                     ),
                     const SizedBox(height: 8),
                     Expanded(

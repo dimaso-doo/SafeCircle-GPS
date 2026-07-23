@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class AppConfig {
@@ -71,6 +72,19 @@ class AppConfig {
 
   static bool get hasSupabaseConfig {
     return supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;
+  }
+
+  static bool get hasGoogleMapsConfig {
+    if (kIsWeb) {
+      return false;
+    }
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      return googleMapsIosApiKey.isNotEmpty;
+    }
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      return googleMapsAndroidApiKey.isNotEmpty;
+    }
+    return false;
   }
 
   static bool get runInDemoMode {
