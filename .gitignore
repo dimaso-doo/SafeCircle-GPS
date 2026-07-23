@@ -12,6 +12,9 @@ coverage/
 
 # Local secrets
 .env
+ios/Flutter/Secrets.xcconfig
+firebase-service-account*.json
+*firebase-adminsdk*.json
 
 # Android generated and machine-local files
 android/.gradle/

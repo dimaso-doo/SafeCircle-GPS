@@ -11,7 +11,8 @@ SafeCircle GPS is a privacy-first family location sharing app. This branch now i
 
 ## Required Flutter version
 
-- This project uses Dart SDK `>=3.4.0 <4.0.0` (`pubspec.yaml`) and is intended for Flutter **3.4+**.
+- Verified with Flutter **3.44.7** and Dart SDK compatible with
+  `>=3.4.0 <4.0.0` (`pubspec.yaml`).
 
 ## Tech stack
 
@@ -57,7 +58,7 @@ cp .env.example .env
 
 3. Configure backend credentials in `.env` or use `--dart-define`.
 
-This repository is currently linked to project `Reachlyst`:
+This repository is currently linked to the dedicated Supabase project `SafeCircle GPS`:
 
 - `SUPABASE_URL=https://bwiihydbnoroaiqpglco.supabase.co`
 - `SUPABASE_ANON_KEY` is prefilled in `/Users/home/Documents/GPS_Track_Mobile_APP/.env`
@@ -109,36 +110,56 @@ flutter run -d ios
 supabase db push
 ```
 
-Note: this environment currently does not yet have the SafeCircle tables because the Supabase CLI is not available here yet. Ensure migrations in `supabase/migrations/` are applied in your Supabase SQL editor once if `supabase db push` is not available.
+The SafeCircle migrations and RLS policies are applied to project
+`bwiihydbnoroaiqpglco`.
 
 ### Google sign-up/sign-in setup (Google OAuth)
 
-To enable **Sign up with Google**:
+Google OAuth is configured in the dedicated Google Cloud project
+`safecircle-gps`:
 
-1. In Supabase Dashboard → Authentication → Providers:
-   - Enable `Google`.
-   - Add `Client ID` and `Client Secret` from Google Cloud OAuth credentials.
-2. In Google Cloud Console:
-   - Create OAuth consent screen and publish test settings.
-   - Create OAuth client for Android:
-     - Package name: `com.safecircle.gps`
-     - Add debug SHA-1/SHA-256 fingerprints for your signing keys.
-   - Create OAuth client for iOS:
-     - Bundle ID: `com.safecircle.gps`
-   - Add authorized redirect URI/callbacks handled through app scheme:
-     - `com.safecircle.gps://login-callback/`
-3. In `.env`/`--dart-define`, set:
-   - `SUPABASE_OAUTH_REDIRECT_SCHEME=com.safecircle.gps`
-4. Update platform files already included in this branch:
-   - Android intent filter in `android/app/src/main/AndroidManifest.xml`
-   - iOS URL scheme in `ios/Runner/Info.plist`
-5. Restart app after `flutter clean` and `flutter pub get` once credentials are set.
+- Consent screen name: `SafeCircle GPS`
+- Audience: External, in production
+- OAuth client: `SafeCircle GPS Supabase`
+- Supabase callback:
+  `https://bwiihydbnoroaiqpglco.supabase.co/auth/v1/callback`
+- App callback scheme: `com.safecircle.gps://login-callback/`
+- Supabase Google provider is enabled with the dedicated SafeCircle client.
+
+The Android intent filter and iOS URL scheme are already configured.
+
+### Google Maps setup
+
+- Billing account is linked to Google Cloud project `safecircle-gps`.
+- `Maps SDK for Android` and `Maps SDK for iOS` are enabled.
+- `SafeCircle Maps Android` is restricted to:
+  - API: Maps SDK for Android
+  - package: `com.safecircle.gps`
+  - debug SHA-1: `67:4C:04:00:8A:C8:3C:AF:D4:6D:AC:13:D1:54:46:76:52:B3:A1:7B`
+- `SafeCircle Maps iOS` is restricted to:
+  - API: Maps SDK for iOS
+  - bundle ID: `com.safecircle.gps`
+- Real key values remain only in ignored local files `.env` and
+  `ios/Flutter/Secrets.xcconfig`.
 
 ### Push notifications and SOS setup
 
-1. Add Firebase platform config to your project from Firebase console:
-   - `google-services.json` on Android
-   - `GoogleService-Info.plist` on iOS
+Firebase project `safecircle-gps` is registered for both platforms:
+
+- Android package: `com.safecircle.gps`
+- iOS bundle ID: `com.safecircle.gps`
+- Android config: `android/app/google-services.json`
+- iOS config: `ios/Runner/GoogleService-Info.plist`
+
+Android applies the Google Services Gradle plugin. iOS includes Push Notifications,
+Remote notifications background mode, and the Firebase plist in the Runner target.
+
+1. For Google Maps, place restricted platform keys in local configuration:
+   - `.env`: `GOOGLE_MAPS_ANDROID_API_KEY=...`
+   - `.env`: `GOOGLE_MAPS_IOS_API_KEY=...`
+   - `ios/Flutter/Secrets.xcconfig`: `GOOGLE_MAPS_IOS_API_KEY=...`
+   - Android reads its key from `.env` during Gradle configuration.
+   - iOS reads its key from the ignored `Secrets.xcconfig` file.
 2. Set Edge Function secrets:
    - `SUPABASE_URL`
    - `SUPABASE_SERVICE_ROLE_KEY`

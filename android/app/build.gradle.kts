@@ -1,9 +1,25 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("com.google.gms.google-services")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
+
+val safeCircleEnv =
+    Properties().apply {
+        val envFile = rootProject.file("../.env")
+        if (envFile.exists()) {
+            envFile.inputStream().use { stream -> load(stream) }
+        }
+    }
+
+val googleMapsApiKey =
+    System.getenv("GOOGLE_MAPS_ANDROID_API_KEY")
+        ?: safeCircleEnv.getProperty("GOOGLE_MAPS_ANDROID_API_KEY")
+        ?: "DEMO_KEY_NOT_CONFIGURED"
 
 android {
     namespace = "com.safecircle.gps"
@@ -24,6 +40,7 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        manifestPlaceholders["GOOGLE_MAPS_API_KEY"] = googleMapsApiKey
     }
 
     buildTypes {

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "404883796112",
+    "project_id": "safecircle-gps",
+    "storage_bucket": "safecircle-gps.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:404883796112:android:15b93c5d3af1bcbf192815",
+        "android_client_info": {
+          "package_name": "com.safecircle.gps"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCNdRAekm_XmtVhydNldngQQ2O4aFmpLNI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

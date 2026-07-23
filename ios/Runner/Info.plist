@@ -24,6 +24,8 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>GoogleMapsApiKey</key>
+	<string>$(GOOGLE_MAPS_IOS_API_KEY)</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
