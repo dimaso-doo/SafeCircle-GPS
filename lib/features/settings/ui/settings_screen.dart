@@ -310,7 +310,15 @@ class _SettingsContent extends ConsumerWidget {
           label: const Text('Sign out'),
           onPressed: authState.isLoading
               ? null
-              : () => ref.read(authControllerProvider.notifier).signOut(),
+              : () async {
+                  try {
+                    await ref
+                        .read(safeCircleNotificationControllerProvider)
+                        .deactivateCurrentDeviceToken();
+                  } finally {
+                    await ref.read(authControllerProvider.notifier).signOut();
+                  }
+                },
         ),
         const SizedBox(height: 16),
         const Text(

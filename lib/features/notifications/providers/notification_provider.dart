@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -45,45 +46,69 @@ class SafeCircleNotificationController {
   SafeCircleNotificationController(this.ref);
 
   final Ref ref;
+  bool _isInitializing = false;
+  StreamSubscription<String>? _tokenRefreshSubscription;
 
   Future<void> ensureNotificationsReady() async {
     final user = ref.read(authControllerProvider).user;
     if (user == null) return;
     if (AppConfig.runInDemoMode) return;
+    if (_isInitializing) return;
 
-    final permission = await FirebaseMessaging.instance.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-      provisional: false,
-    );
+    _isInitializing = true;
+    try {
+      await FirebaseMessaging.instance.setAutoInitEnabled(true);
 
-    if (permission.authorizationStatus != AuthorizationStatus.authorized &&
-        permission.authorizationStatus != AuthorizationStatus.provisional) {
-      return;
+      final permission = await FirebaseMessaging.instance.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+        provisional: false,
+      );
+
+      if (permission.authorizationStatus != AuthorizationStatus.authorized &&
+          permission.authorizationStatus != AuthorizationStatus.provisional) {
+        return;
+      }
+
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token == null || token.isEmpty) return;
+
+      final repository = ref.read(notificationRepositoryProvider);
+      await repository.upsertDeviceToken(
+        userId: user.id,
+        token: token,
+        platform: Platform.isIOS ? 'ios' : 'android',
+        appVersion: null,
+      );
+
+      _tokenRefreshSubscription ??=
+          FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
+        final currentUser = ref.read(authControllerProvider).user;
+        if (currentUser == null) return;
+        await repository.upsertDeviceToken(
+          userId: currentUser.id,
+          token: newToken,
+          platform: Platform.isIOS ? 'ios' : 'android',
+          appVersion: null,
+        );
+      });
+      _tokenRefreshSubscription!.onError((_) {});
+    } finally {
+      _isInitializing = false;
     }
+  }
+
+  Future<void> deactivateCurrentDeviceToken() async {
+    final user = ref.read(authControllerProvider).user;
+    if (user == null || AppConfig.runInDemoMode) return;
 
     final token = await FirebaseMessaging.instance.getToken();
     if (token == null || token.isEmpty) return;
 
-    final repository = ref.read(notificationRepositoryProvider);
-    await repository.upsertDeviceToken(
-      userId: user.id,
-      token: token,
-      platform: Platform.isIOS ? 'ios' : 'android',
-      appVersion: null,
-    );
-
-    FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
-      await repository.upsertDeviceToken(
-        userId: user.id,
-        token: newToken,
-        platform: Platform.isIOS ? 'ios' : 'android',
-        appVersion: null,
-      );
-    }).onError((_) {});
-
-    FirebaseMessaging.instance.setAutoInitEnabled(true);
+    await ref
+        .read(notificationRepositoryProvider)
+        .deactivateDeviceToken(token, userId: user.id);
   }
 
   Future<void> sendNotificationEvent({
