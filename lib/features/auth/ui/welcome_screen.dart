@@ -107,7 +107,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                       autofillHints: const [AutofillHints.name],
                       decoration: const InputDecoration(
                         labelText: 'Your name',
-                        hintText: 'For example, Ana',
+                        hintText: 'For example, Sandra',
                         prefixIcon: Icon(Icons.person_outline),
                       ),
                       validator: (value) {
