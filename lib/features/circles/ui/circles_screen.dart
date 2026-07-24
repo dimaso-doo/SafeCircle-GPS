@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/widgets/empty_states.dart';
-import '../../../features/auth/providers/auth_provider.dart';
+import '../../history/ui/history_screen.dart';
+import '../../notifications/providers/notification_provider.dart';
+import '../../safe_zones/ui/safe_zones_screen.dart';
 import '../providers/circle_providers.dart';
-import '../../../features/paywall/ui/paywall_screen.dart';
-import '../../subscription/providers/subscription_provider.dart';
 
 class CirclesScreen extends ConsumerStatefulWidget {
   const CirclesScreen({super.key});
@@ -31,11 +31,6 @@ class _CirclesScreenState extends ConsumerState<CirclesScreen> {
     final name = _nameController.text.trim();
     if (name.isEmpty) return;
 
-    final canCreate = await _ensureCircleCapacity();
-    if (!canCreate) {
-      return;
-    }
-
     setState(() => _isCreating = true);
     try {
       await ref.read(circleControllerProvider).createCircle(name);
@@ -58,11 +53,6 @@ class _CirclesScreenState extends ConsumerState<CirclesScreen> {
     final code = _codeController.text.trim();
     if (code.isEmpty) return;
 
-    final canJoin = await _ensureCircleCapacity();
-    if (!canJoin) {
-      return;
-    }
-
     setState(() => _isJoining = true);
     try {
       await ref.read(circleControllerProvider).joinCircle(code);
@@ -71,6 +61,7 @@ class _CirclesScreenState extends ConsumerState<CirclesScreen> {
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Joined circle.')));
+      await _offerNotifications();
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -139,27 +130,34 @@ class _CirclesScreenState extends ConsumerState<CirclesScreen> {
     );
   }
 
-  Future<bool> _ensureCircleCapacity() async {
-    final authState = ref.read(authControllerProvider);
-    if (authState.user == null) return false;
-
-    final circles = await ref.read(circlesProvider.future);
-    final subscription = await ref.read(subscriptionStateProvider.future);
-    if (subscription.canCreateOrJoinCircle(circles.length)) {
-      return true;
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Upgrade to Premium to manage more than one active circle.')),
+  Future<void> _offerNotifications() async {
+    if (!mounted) return;
+    final shouldEnable = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Family alerts'),
+        content: const Text(
+          'Would you like KinOrbit to notify you about important family sharing changes? '
+          'You can change this later in Settings.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Not now'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Enable'),
+          ),
+        ],
+      ),
     );
 
-    if (mounted) {
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const PaywallScreen()),
-      );
+    if (shouldEnable == true) {
+      await ref
+          .read(safeCircleNotificationControllerProvider)
+          .ensureNotificationsReady();
     }
-
-    return false;
   }
 
   void _openCreateDialog() {
@@ -230,49 +228,100 @@ class _CirclesScreenState extends ConsumerState<CirclesScreen> {
     final circles = ref.watch(circlesProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Family Circles'),
-        actions: [
-          IconButton(onPressed: _openJoinDialog, icon: const Icon(Icons.group_add_outlined)),
-          IconButton(onPressed: _openCreateDialog, icon: const Icon(Icons.add_box_outlined)),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Family')),
       body: circles.when(
-        data: (items) {
-          if (items.isEmpty) {
-            return const EmptyState(message: 'No circles yet. Create one or join with a code.');
-          }
-          return ListView.separated(
-            itemCount: items.length,
-            separatorBuilder: (_, __) => const Divider(height: 1),
-            itemBuilder: (context, index) {
-              final circle = items[index];
-              return ListTile(
-                leading: CircleAvatar(child: Text(circle.name.substring(0, 1).toUpperCase())),
-                title: Text(circle.name),
-                subtitle: Text('Invite code: ${circle.inviteCode}'),
-                onTap: () => _openMembers(circle.id),
-                trailing: IconButton(
-                  tooltip: 'Refresh invite code',
-                  icon: const Icon(Icons.refresh),
-                  onPressed: () async {
-                    try {
-                      await ref
-                          .read(circleControllerProvider)
-                          .refreshInviteCode(circle.id);
-                      ScaffoldMessenger.of(context)
-                          .showSnackBar(const SnackBar(content: Text('Invite code regenerated')));
-                    } catch (error) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Error: ${error.toString()}')),
-                      );
-                    }
-                  },
+        data: (items) => RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(circlesProvider);
+            await ref.read(circlesProvider.future);
+          },
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              if (items.isEmpty) ...[
+                const SizedBox(height: 56),
+                const Icon(Icons.family_restroom, size: 72),
+                const SizedBox(height: 20),
+                const Text(
+                  'Add your family',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
                 ),
-              );
-            },
-          );
-        },
+                const SizedBox(height: 8),
+                const Text(
+                  'Create a private family group or join one with an invite code.',
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+              ] else ...[
+                const Text(
+                  'Your family',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 8),
+                for (final circle in items)
+                  Card(
+                    child: ListTile(
+                      leading: const CircleAvatar(child: Icon(Icons.groups)),
+                      title: Text(circle.name),
+                      subtitle: Text('Invite code: ${circle.inviteCode}'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => _openMembers(circle.id),
+                    ),
+                  ),
+                const SizedBox(height: 16),
+              ],
+              FilledButton.icon(
+                onPressed: _openCreateDialog,
+                icon: const Icon(Icons.add),
+                label: const Text('Create family'),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: _openJoinDialog,
+                icon: const Icon(Icons.group_add_outlined),
+                label: const Text('Join with invite code'),
+              ),
+              if (items.isNotEmpty) ...[
+                const SizedBox(height: 28),
+                const Text(
+                  'Family tools',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 8),
+                Card(
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: const Icon(Icons.history),
+                        title: const Text('Location history'),
+                        subtitle: const Text('Review family routes and recent locations.'),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const HistoryScreen(),
+                          ),
+                        ),
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: const Icon(Icons.shield_outlined),
+                        title: const Text('Safe zones'),
+                        subtitle: const Text('Manage home, school and other family places.'),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const SafeZonesScreen(),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => ErrorState(message: error.toString()),
       ),

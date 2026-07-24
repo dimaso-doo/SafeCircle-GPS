@@ -19,13 +19,13 @@ import '../../../models/safe_zone.dart';
 import '../../../services/location/location_service.dart';
 import '../../../features/settings/providers/settings_provider.dart';
 import '../../../features/notifications/providers/notification_provider.dart';
-import '../../../features/paywall/ui/paywall_screen.dart';
-import '../../../features/subscription/providers/subscription_provider.dart';
 import '../providers/map_provider.dart';
 import 'location_permission_gate.dart';
 
 class MapScreen extends ConsumerStatefulWidget {
-  const MapScreen({super.key});
+  const MapScreen({super.key, required this.onAddFamily});
+
+  final VoidCallback onAddFamily;
 
   @override
   ConsumerState<MapScreen> createState() => _MapScreenState();
@@ -40,8 +40,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   String? _activeMembersSignature;
   bool _isTrackingSessionActive = false;
   bool _isShareActionRunning = false;
-  bool _isSosActionRunning = false;
-  bool _isNotificationInitialized = false;
   DateTime? _lastUploadAt;
   List<SafeZone> _safeZones = const <SafeZone>[];
 
@@ -79,17 +77,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     if (!permissionState.hasValue ||
         permissionState.valueOrNull != LocationPermissionState.granted) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('Map'),
-          actions: [
-            IconButton(
-              onPressed: _isSosActionRunning ? null : _sendSos,
-              icon: const Icon(Icons.warning_amber_rounded),
-              color: Theme.of(context).colorScheme.error,
-              tooltip: 'Send SOS',
-            ),
-          ],
-        ),
+        appBar: AppBar(title: const Text('Map')),
         body: LocationPermissionGate(
           onPermissionStateChanged: () {
             ref.invalidate(permissionStateProvider);
@@ -110,23 +98,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       _safeZoneStates.removeWhere((zoneId, _) => !zoneIds.contains(zoneId));
     });
 
-    if (!_isNotificationInitialized) {
-      _isNotificationInitialized = true;
-      ref.read(safeCircleNotificationControllerProvider).ensureNotificationsReady();
-    }
-
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Map'),
-        actions: [
-          IconButton(
-            onPressed: _isSosActionRunning ? null : _sendSos,
-            icon: const Icon(Icons.warning_amber_rounded),
-            color: Theme.of(context).colorScheme.error,
-            tooltip: 'Send SOS',
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Map')),
       body: membersState.when(
         data: (members) => _mapBody(
           positionState,
@@ -302,106 +275,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       if (mounted) {
         setState(() {
           _isShareActionRunning = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _pauseSharing() async {
-    setState(() {
-      _isShareActionRunning = true;
-    });
-
-    try {
-      await _stopTrackingStream();
-      await ref.read(settingsControllerProvider).setPaused(true);
-      ref.invalidate(mapLocationSettingsProvider);
-      final user = ref.read(authControllerProvider).user;
-      if (_activeCircleId != null && user != null) {
-        Position? position;
-        if (AppConfig.runInDemoMode) {
-          position = _latestDemoPosition(user.id);
-        } else {
-          position = await ref.read(locationServiceProvider).currentLocation();
-        }
-
-        if (position != null) {
-          await ref.read(safeCircleNotificationControllerProvider).notifySharingPaused(
-                circleId: _activeCircleId!,
-                latitude: position.latitude,
-                longitude: position.longitude,
-              );
-        }
-      }
-      _showSnack(context, 'Location sharing paused.');
-    } catch (error) {
-      _showSnack(context, 'Unable to pause: ${error.toString()}');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isShareActionRunning = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _sendSos() async {
-    final user = ref.read(authControllerProvider).user;
-    if (user == null || _activeCircleId == null) {
-      _showSnack(context, 'Join a family circle before sending SOS.');
-      return;
-    }
-
-    final isMember = await ref.read(canShareLocationProvider.future);
-    if (!isMember) {
-      _showSnack(context, 'You must be an accepted circle member to send SOS.');
-      return;
-    }
-
-    final subscription = await ref.read(subscriptionStateProvider.future);
-    if (!subscription.canUseSosFeature()) {
-      _showSnack(context, 'SOS is a Premium feature.');
-      if (mounted) {
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const PaywallScreen()),
-        );
-      }
-      return;
-    }
-
-    setState(() {
-      _isSosActionRunning = true;
-    });
-
-    try {
-      final service = ref.read(locationServiceProvider);
-      final userId = user.id;
-      final position = AppConfig.runInDemoMode
-          ? _latestDemoPosition(userId)
-          : await service.currentLocation();
-
-      if (position == null) {
-        throw StateError('No location available for SOS. Start sharing first.');
-      }
-
-      final battery = AppConfig.runInDemoMode
-          ? DemoBackend.shared.latestLocationFor(userId)?.batteryLevel
-          : await service.batteryLevel();
-
-      await ref.read(safeCircleNotificationControllerProvider).saveSosEventAndNotify(
-            circleId: _activeCircleId!,
-            userId: user.id,
-            position: position,
-            batteryLevel: battery,
-          );
-
-      _showSnack(context, 'SOS alert sent to your circle.');
-    } catch (error) {
-      _showSnack(context, 'Unable to send SOS: ${error.toString()}');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSosActionRunning = false;
         });
       }
     }
@@ -740,17 +613,28 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
     return Column(
       children: [
-        if (canShare) _sharingStatusBar(settings),
         if (canShare)
           _sharingControls(settings)
         else
-          Container(
-            width: double.infinity,
-            color: Theme.of(context).colorScheme.primaryContainer,
-            padding: const EdgeInsets.all(12),
-            child: const Text(
-              'Your location is private. Add family when you are ready to share.',
-              textAlign: TextAlign.center,
+          Card(
+            margin: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Only you can see this location. Add family when you are ready to share.',
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  FilledButton.icon(
+                    onPressed: widget.onAddFamily,
+                    icon: const Icon(Icons.person_add_alt_1),
+                    label: const Text('Add family'),
+                  ),
+                ],
+              ),
             ),
           ),
         Expanded(child: _memberMap(position, members, safeZones)),
@@ -758,58 +642,38 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     );
   }
 
-  Widget _sharingStatusBar(LocationSharingSettings? settings) {
-    final backgroundText = settings?.isBackgroundSharingEnabled == true ? ' · background on' : ' · foreground only';
-    final status = _isTrackingSessionActive
-        ? 'Location sharing is active$backgroundText'
-        : settings?.isSharingEnabled == true && settings?.isPaused == true
-            ? 'Location sharing is paused'
-            : 'Location sharing is stopped';
-
-    return Container(
-      width: double.infinity,
-      color: Theme.of(context).colorScheme.primaryContainer,
-      padding: const EdgeInsets.all(12),
-      child: Text(status, style: Theme.of(context).textTheme.titleSmall),
-    );
-  }
-
   Widget _sharingControls(LocationSharingSettings? settings) {
-    final canStart = !_isShareActionRunning &&
-        !_isTrackingSessionActive &&
+    final isSharing =
+        settings?.isSharingEnabled == true && settings?.isPaused != true;
+    final canToggle = !_isShareActionRunning &&
         _activeCircleId != null &&
         _memberIds.isNotEmpty;
 
-    final canPause = !_isShareActionRunning && _isTrackingSessionActive;
-
-    final canStop =
-        !_isShareActionRunning && (_isTrackingSessionActive || settings?.isSharingEnabled == true);
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: FilledButton(
-              onPressed: canStart ? _startSharing : null,
-              child: const Text('Start sharing'),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: OutlinedButton(
-              onPressed: canPause ? _pauseSharing : null,
-              child: const Text('Pause sharing'),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: OutlinedButton(
-              onPressed: canStop ? _stopSharing : null,
-              child: const Text('Stop sharing'),
-            ),
-          ),
-        ],
+    return Card(
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+      child: SwitchListTile(
+        value: isSharing,
+        onChanged: canToggle
+            ? (enabled) {
+                if (enabled) {
+                  _startSharing();
+                } else {
+                  _stopSharing();
+                }
+              }
+            : null,
+        secondary: Icon(
+          isSharing ? Icons.location_on : Icons.location_off_outlined,
+          color: isSharing ? Colors.green.shade700 : null,
+        ),
+        title: Text(
+          isSharing ? 'Location sharing is active' : 'Share my location',
+        ),
+        subtitle: Text(
+          isSharing
+              ? 'Accepted family members can see your live location.'
+              : 'Sharing stays off until you turn it on.',
+        ),
       ),
     );
   }

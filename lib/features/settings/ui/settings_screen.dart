@@ -6,7 +6,6 @@ import '../../../core/widgets/empty_states.dart';
 import '../../../features/auth/providers/auth_provider.dart';
 import '../../../features/map/providers/map_provider.dart';
 import '../../../features/notifications/providers/notification_provider.dart';
-import '../../../features/paywall/ui/paywall_screen.dart';
 import '../../../features/settings/providers/settings_provider.dart';
 import '../../../features/subscription/providers/subscription_provider.dart';
 import '../../../models/location_sharing_settings.dart';
@@ -89,39 +88,19 @@ class _SettingsContent extends ConsumerWidget {
           ),
         ),
         const Divider(height: 24),
-        _sectionTitle('Subscription'),
-        ListTile(
-          title: Text(subscription.planName),
-          subtitle: Text(
-            subscription.isPremium
-                ? 'Premium plan active'
-                : 'Free plan: 1 circle, up to 2 members, 24h history',
-          ),
-          trailing: subscription.isPremium
-              ? const Icon(Icons.star, color: Colors.orange)
-              : TextButton(
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const PaywallScreen()),
-                  ),
-                  child: const Text('Upgrade'),
-                ),
-        ),
-        const Divider(height: 24),
         _sectionTitle('Push notifications'),
         SwitchListTile(
           value: notificationData.pushEnabled,
           title: const Text('Push notifications'),
           subtitle: const Text('Allow KinOrbit alerts to reach your device.'),
-          onChanged: (value) =>
-              ref.read(safeCircleNotificationControllerProvider).setPushEnabled(value),
-        ),
-        SwitchListTile(
-          value: notificationData.notifySos,
-          title: const Text('SOS alerts'),
-          subtitle: const Text('Receive emergency SOS alerts from circle members.'),
-          onChanged: notificationData.pushEnabled
-              ? (value) => ref.read(safeCircleNotificationControllerProvider).setNotifySos(value)
-              : null,
+          onChanged: (value) async {
+            final controller =
+                ref.read(safeCircleNotificationControllerProvider);
+            if (value) {
+              await controller.ensureNotificationsReady();
+            }
+            await controller.setPushEnabled(value);
+          },
         ),
         SwitchListTile(
           value: notificationData.notifySafeZoneEnter,
@@ -139,31 +118,6 @@ class _SettingsContent extends ConsumerWidget {
           onChanged: notificationData.pushEnabled
               ? (value) =>
                   ref.read(safeCircleNotificationControllerProvider).setNotifySafeZoneExit(value)
-              : null,
-        ),
-        SwitchListTile(
-          value: notificationData.notifySharingPaused,
-          title: const Text('Sharing paused'),
-          subtitle: const Text('Receive alerts when a member pauses live sharing.'),
-          onChanged: notificationData.pushEnabled
-              ? (value) =>
-                  ref.read(safeCircleNotificationControllerProvider).setNotifySharingPaused(value)
-              : null,
-        ),
-        const Divider(height: 24),
-        _sectionTitle('Location sharing controls'),
-        SwitchListTile(
-          value: settings.isSharingEnabled,
-          title: const Text('Location sharing enabled'),
-          subtitle: const Text('Allow KinOrbit to upload your location when you tap Share now.'),
-          onChanged: (value) => ref.read(settingsControllerProvider).setSharingEnabled(value),
-        ),
-        SwitchListTile(
-          value: settings.isPaused,
-          title: const Text('Pause sharing now'),
-          subtitle: const Text('Temporarily stop sending new updates without disabling consent.'),
-          onChanged: settings.isSharingEnabled
-              ? (value) => ref.read(settingsControllerProvider).setPaused(value)
               : null,
         ),
         const Divider(height: 24),
@@ -266,52 +220,12 @@ class _SettingsContent extends ConsumerWidget {
             subtitle: Text('Interval and distance thresholds are automatically raised.'),
           ),
         const Divider(height: 24),
-        _sectionTitle('History retention'),
+        _sectionTitle('History'),
         ListTile(
           title: const Text('Local history retention'),
-          subtitle: Text('Keep history for ${settings.historyRetentionHours} hour(s).'),
-        ),
-        ToggleButtons(
-          isSelected: [
-            settings.historyRetentionHours == 24,
-            settings.historyRetentionHours == 168,
-            settings.historyRetentionHours == 720,
-          ],
-          onPressed: (index) async {
-            const values = [24, 168, 720];
-            final requestedHours = values[index];
-
-            if (index == 0) {
-              await ref.read(settingsControllerProvider).setHistoryRetentionHours(requestedHours);
-              return;
-            }
-
-            if (subscription.canKeepHistoryHours(requestedHours)) {
-              await ref.read(settingsControllerProvider).setHistoryRetentionHours(requestedHours);
-            } else {
-              if (!context.mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Premium required for ${index == 1 ? '7-day' : '30-day'} retention.')),
-              );
-              await Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const PaywallScreen()),
-              );
-            }
-          },
-          children: const [
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12),
-              child: Text('24h (Free)'),
-            ),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12),
-              child: Text('7d (Premium)'),
-            ),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12),
-              child: Text('30d (Premium)'),
-            ),
-          ],
+          subtitle: const Text(
+            'Recent family history is kept for 24 hours in the current version.',
+          ),
         ),
         const SizedBox(height: 24),
         ElevatedButton.icon(
@@ -354,7 +268,6 @@ class _SettingsContent extends ConsumerWidget {
         ),
         const SizedBox(height: 16),
         const Text(
-          'Store configuration is explicit: product IDs are read from environment values, not hardcoded. '
           'KinOrbit keeps tracking controls visible and user-initiated at all times.',
           style: TextStyle(color: Colors.grey),
         ),
