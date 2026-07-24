@@ -14,45 +14,9 @@ class LocationPermissionGate extends ConsumerStatefulWidget {
 }
 
 class _LocationPermissionGateState extends ConsumerState<LocationPermissionGate> {
-  bool _showSystemPrompt = false;
-
-  void _continueToSystemPrompt() {
-    setState(() {
-      _showSystemPrompt = true;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final permission = ref.watch(permissionStateProvider);
-
-    if (!_showSystemPrompt) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'KinOrbit needs foreground location to show your current position and to share updates inside your approved circle.',
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'You choose when to start sharing. Background tracking can be enabled later from Settings.',
-                style: Theme.of(context).textTheme.bodySmall,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _continueToSystemPrompt,
-                child: const Text('Continue'),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
 
     return permission.when(
       data: (status) {
@@ -102,11 +66,17 @@ class _RequestState extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text(
-              'Tap Continue to allow KinOrbit to read your foreground location.',
+              'KinOrbit needs foreground location to show your current position and to share updates inside your approved circle.',
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'You choose when to start sharing. Background tracking can be enabled later from Settings.',
+              style: Theme.of(context).textTheme.bodySmall,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
-            ElevatedButton(onPressed: onRequest, child: const Text('Allow location access')),
+            ElevatedButton(onPressed: onRequest, child: const Text('Allow location')),
           ],
         ),
       ),
