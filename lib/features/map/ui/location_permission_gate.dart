@@ -13,7 +13,28 @@ class LocationPermissionGate extends ConsumerStatefulWidget {
   ConsumerState<LocationPermissionGate> createState() => _LocationPermissionGateState();
 }
 
-class _LocationPermissionGateState extends ConsumerState<LocationPermissionGate> {
+class _LocationPermissionGateState extends ConsumerState<LocationPermissionGate>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.invalidate(permissionStateProvider);
+      widget.onPermissionStateChanged();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final permission = ref.watch(permissionStateProvider);

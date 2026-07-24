@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/widgets/primary_button.dart';
+import '../../../services/location/location_service.dart';
+import '../../map/providers/map_provider.dart';
 import '../providers/auth_provider.dart';
 
 class WelcomeScreen extends ConsumerStatefulWidget {
@@ -14,6 +16,7 @@ class WelcomeScreen extends ConsumerStatefulWidget {
 class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  bool _isPreparing = false;
 
   @override
   void dispose() {
@@ -22,26 +25,60 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
   }
 
   Future<void> _continue() async {
-    if (!_formKey.currentState!.validate()) {
+    if (_isPreparing || !_formKey.currentState!.validate()) {
       return;
     }
 
-    final success = await ref
-        .read(authControllerProvider.notifier)
-        .continueWithName(_nameController.text);
+    setState(() {
+      _isPreparing = true;
+    });
 
-    if (!mounted || success) {
-      return;
-    }
+    try {
+      final locationService = ref.read(locationServiceProvider);
+      var permission = await locationService.checkPermission();
+      if (permission != LocationPermissionState.granted) {
+        permission = await locationService.requestPermission();
+      }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          ref.read(authControllerProvider).errorMessage ??
-              'KinOrbit could not start. Please try again.',
+      if (!mounted) {
+        return;
+      }
+
+      if (permission != LocationPermissionState.granted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Allow location to open your personal map.'),
+          ),
+        );
+        return;
+      }
+
+      ref.invalidate(permissionStateProvider);
+      ref.invalidate(currentPositionProvider);
+
+      final success = await ref
+          .read(authControllerProvider.notifier)
+          .continueWithName(_nameController.text);
+
+      if (!mounted || success) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            ref.read(authControllerProvider).errorMessage ??
+                'KinOrbit could not start. Please try again.',
+          ),
         ),
-      ),
-    );
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isPreparing = false;
+        });
+      }
+    }
   }
 
   @override
@@ -125,7 +162,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                     const SizedBox(height: 12),
                     PrimaryButton(
                       label: 'Continue',
-                      isLoading: state.isLoading,
+                      isLoading: state.isLoading || _isPreparing,
                       onPressed: _continue,
                     ),
                     const SizedBox(height: 24),
