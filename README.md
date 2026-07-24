@@ -1,6 +1,6 @@
 # SafeCircle GPS (Flutter + Supabase MVP)
 
-SafeCircle GPS is a privacy-first family location sharing app. This branch now includes authentication, circle-based sharing, live foreground sharing, and optional background sharing controls.
+SafeCircle GPS is a privacy-first family location sharing app. This branch now includes name-only anonymous authentication, circle-based sharing, live foreground sharing, and optional background sharing controls.
 
 ## Demo-ready setup
 
@@ -18,7 +18,7 @@ SafeCircle GPS is a privacy-first family location sharing app. This branch now i
 
 - Flutter (latest stable)
 - Riverpod for state management
-- Supabase for Auth + Postgres + Realtime
+- Supabase for anonymous Auth + Postgres + Realtime
 - Google Maps for map rendering
 - geolocator + battery_plus for location capture and battery metadata
 
@@ -32,7 +32,7 @@ Firebase Cloud Messaging is wired end-to-end:
 
 - `lib/core/` shared constants, theme and reusable widgets
 - `lib/features/` feature-first UI/state
-  - `auth/` Welcome, Sign up, Login, Forgot password
+  - `auth/` name-only onboarding and persistent device session
   - `map/` map screen + permission gate + realtime markers
   - `circles/` family circles, member list, invite code flow
   - `safe_zones/` create/edit/delete zones, assignments, geofence UI
@@ -73,17 +73,18 @@ GOOGLE_MAPS_IOS_API_KEY=ios_maps_key
 APPLE_PREMIUM_SUBSCRIPTION_IDS=com.example.safecircle.premium.month
 GOOGLE_PREMIUM_SUBSCRIPTION_IDS=premium_month
 SAFE_CIRCLE_DEMO_MODE=false
-SUPABASE_OAUTH_REDIRECT_SCHEME=com.safecircle.gps
 ```
 
-### Built-in demo account (auto-seeded)
+### Name-only onboarding
 
-For faster review runs in demo mode, use:
+Enter a display name and tap **Continue**. No email, password, or social
+provider is shown. In live mode, Supabase creates a unique anonymous user and
+persists its session on the device. In demo mode, the same UI uses the in-memory
+review backend.
 
-- Email: `demo@safe-circle.local`
-- Password: `demo1234`
-
-In demo mode, this account is available immediately without creating a new user.
+Anonymous users cannot recover the same account after signing out, clearing app
+data, or moving to another device. The Settings screen therefore displays a
+clear warning before removing the local account.
 
 4. (Optional) run with explicit defines:
 
@@ -113,20 +114,16 @@ supabase db push
 The SafeCircle migrations and RLS policies are applied to project
 `bwiihydbnoroaiqpglco`.
 
-### Google sign-up/sign-in setup (Google OAuth)
+### Supabase anonymous authentication
 
-Google OAuth is configured in the dedicated Google Cloud project
-`safecircle-gps`:
-
-- Consent screen name: `SafeCircle GPS`
-- Audience: External, in production
-- OAuth client: `SafeCircle GPS Supabase`
-- Supabase callback:
-  `https://bwiihydbnoroaiqpglco.supabase.co/auth/v1/callback`
-- App callback scheme: `com.safecircle.gps://login-callback/`
-- Supabase Google provider is enabled with the dedicated SafeCircle client.
-
-The Android intent filter and iOS URL scheme are already configured.
+- Anonymous sign-ins are enabled for project `bwiihydbnoroaiqpglco`.
+- The client stores only the chosen display name in user metadata.
+- Every account still receives a unique `auth.uid()` and uses the existing RLS
+  circle-membership policies.
+- Location sharing remains disabled until accepted circle membership and an
+  explicit **Start sharing** action.
+- Production rollout should add CAPTCHA/Turnstile abuse protection before
+  opening public registration at scale.
 
 ### Google Maps setup
 

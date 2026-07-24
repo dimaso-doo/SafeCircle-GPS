@@ -21,6 +21,14 @@ val googleMapsApiKey =
         ?: safeCircleEnv.getProperty("GOOGLE_MAPS_ANDROID_API_KEY")
         ?: "DEMO_KEY_NOT_CONFIGURED"
 
+val keystorePropertiesFile = rootProject.file("key.properties")
+val keystoreProperties =
+    Properties().apply {
+        if (keystorePropertiesFile.exists()) {
+            keystorePropertiesFile.inputStream().use { stream -> load(stream) }
+        }
+    }
+
 android {
     namespace = "com.safecircle.gps"
     compileSdk = flutter.compileSdkVersion
@@ -32,7 +40,6 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.safecircle.gps"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
@@ -43,11 +50,18 @@ android {
         manifestPlaceholders["GOOGLE_MAPS_API_KEY"] = googleMapsApiKey
     }
 
+    signingConfigs {
+        create("release") {
+            keyAlias = keystoreProperties.getProperty("keyAlias")
+            keyPassword = keystoreProperties.getProperty("keyPassword")
+            storeFile = keystoreProperties.getProperty("storeFile")?.let(::file)
+            storePassword = keystoreProperties.getProperty("storePassword")
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }

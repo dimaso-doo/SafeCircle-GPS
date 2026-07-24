@@ -51,35 +51,34 @@ class AuthRepository {
     return AppUser(id: id, email: email, displayName: displayName);
   }
 
-  Future<void> signUpWithEmail({
-    required String email,
-    required String password,
-    String? displayName,
-  }) async {
+  Future<void> signInAnonymously(String displayName) async {
+    final normalizedName = displayName.trim();
+    if (normalizedName.length < 2 || normalizedName.length > 50) {
+      throw ArgumentError('Name must contain between 2 and 50 characters.');
+    }
+
     if (AppConfig.runInDemoMode) {
-      await DemoBackend.shared.register(
-        email: email,
-        password: password,
-        displayName: displayName,
+      await DemoBackend.shared.signIn(
+        email: 'demo@safe-circle.local',
+        password: 'demo1234',
       );
+      final demoUser = DemoBackend.shared.activeUser;
+      if (demoUser != null) {
+        DemoBackend.shared.setDisplayName(demoUser.id, normalizedName);
+      }
       return;
     }
 
-    final response = await _ensureClient().auth.signUp(
-      email: email,
-      password: password,
+    final response = await _ensureClient().auth.signInAnonymously(
       data: {
-        if (displayName != null && displayName.trim().isNotEmpty)
-          'display_name': displayName.trim(),
+        'display_name': normalizedName,
       },
     );
 
     final user = response.user;
     if (user == null) {
-      throw StateError('Sign up did not return a user. Confirm email flow before creating profile.');
+      throw StateError('SafeCircle could not create your device account.');
     }
-
-    await ensureUserProfile(user.id, displayName);
   }
 
   Future<void> ensureUserProfile(String userId, String? displayName) async {
@@ -105,44 +104,6 @@ class AuthRepository {
     if (requestedName != null && requestedName.isNotEmpty) {
       await _ensureClient().from('users').update({'display_name': requestedName}).eq('id', userId);
     }
-  }
-
-  Future<void> signInWithEmail({
-    required String email,
-    required String password,
-  }) async {
-    if (AppConfig.runInDemoMode) {
-      await DemoBackend.shared.signIn(email: email, password: password);
-      return;
-    }
-
-    await _ensureClient().auth.signInWithPassword(email: email, password: password);
-  }
-
-  Future<void> signInWithGoogle() async {
-    if (AppConfig.runInDemoMode) {
-      throw StateError('Google sign-in is not available in demo mode.');
-    }
-
-    final redirectScheme = AppConfig.supabaseOAuthRedirectScheme.trim();
-    final redirectTo = redirectScheme.isEmpty
-        ? null
-        : '${redirectScheme}://login-callback/';
-
-    await _ensureClient().auth.signInWithOAuth(
-      OAuthProvider.google,
-      redirectTo: redirectTo,
-      queryParams: const {
-        'prompt': 'select_account',
-      },
-    );
-  }
-
-  Future<void> forgotPassword(String email) async {
-    if (AppConfig.runInDemoMode) {
-      return;
-    }
-    await _ensureClient().auth.resetPasswordForEmail(email);
   }
 
   Future<void> signOut() async {

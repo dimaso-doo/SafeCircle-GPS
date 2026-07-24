@@ -1,11 +1,12 @@
 # SafeCircle GPS Demo Checklist
 
-## 1) Login / Signup test
+## 1) Name-only onboarding test
 - Open app in clean state.
-- Navigate to Sign Up and create a new account.
+- Enter a display name and tap Continue.
 - Verify user lands in map/circles flow.
-- Sign out and sign in using Login.
-- Verify Forgot Password action can be triggered.
+- Verify no email, password, or social login is requested.
+- Restart the app and verify the anonymous Supabase session persists.
+- Open Settings and verify account removal shows the recovery warning.
 
 ## 2) Create circle test
 - Open Family/Circles screen.

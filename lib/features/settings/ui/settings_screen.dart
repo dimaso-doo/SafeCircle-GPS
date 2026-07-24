@@ -80,6 +80,15 @@ class _SettingsContent extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        _sectionTitle('Profile'),
+        ListTile(
+          leading: const CircleAvatar(child: Icon(Icons.person)),
+          title: Text(authState.user?.displayName ?? 'SafeCircle member'),
+          subtitle: const Text(
+            'No email or password. This account is currently stored on this device.',
+          ),
+        ),
+        const Divider(height: 24),
         _sectionTitle('Subscription'),
         ListTile(
           title: Text(subscription.planName),
@@ -307,10 +316,33 @@ class _SettingsContent extends ConsumerWidget {
         const SizedBox(height: 24),
         ElevatedButton.icon(
           icon: const Icon(Icons.logout),
-          label: const Text('Sign out'),
+          label: const Text('Remove account from this device'),
           onPressed: authState.isLoading
               ? null
               : () async {
+                  final shouldSignOut = await showDialog<bool>(
+                    context: context,
+                    builder: (dialogContext) => AlertDialog(
+                      title: const Text('Remove this device account?'),
+                      content: const Text(
+                        'Because this account has no email or password, you may '
+                        'not be able to recover its circles and history after signing out.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(dialogContext).pop(false),
+                          child: const Text('Cancel'),
+                        ),
+                        FilledButton(
+                          onPressed: () => Navigator.of(dialogContext).pop(true),
+                          child: const Text('Remove'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (shouldSignOut != true) {
+                    return;
+                  }
                   try {
                     await ref
                         .read(safeCircleNotificationControllerProvider)

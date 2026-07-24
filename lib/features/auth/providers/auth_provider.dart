@@ -45,59 +45,10 @@ class AuthController extends StateNotifier<AuthState> {
   final AuthRepository repository;
   StreamSubscription<AppUser?>? _subscription;
 
-  Future<bool> signIn({
-    required String email,
-    required String password,
-  }) async {
+  Future<bool> continueWithName(String displayName) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
-      await repository.signInWithEmail(email: email, password: password);
-      return true;
-    } catch (error) {
-      state = state.copyWith(isLoading: false, errorMessage: error.toString());
-      return false;
-    }
-  }
-
-  Future<bool> signInWithGoogle() async {
-    state = state.copyWith(isLoading: true, errorMessage: null);
-    try {
-      await repository.signInWithGoogle();
-      return true;
-    } catch (error) {
-      state = state.copyWith(isLoading: false, errorMessage: error.toString());
-      return false;
-    }
-  }
-
-  Future<bool> signUpWithGoogle() async {
-    return signInWithGoogle();
-  }
-
-  Future<bool> signUp({
-    required String email,
-    required String password,
-    String? displayName,
-  }) async {
-    state = state.copyWith(isLoading: true, errorMessage: null);
-    try {
-      await repository.signUpWithEmail(
-        email: email,
-        password: password,
-        displayName: displayName,
-      );
-      return true;
-    } catch (error) {
-      state = state.copyWith(isLoading: false, errorMessage: error.toString());
-      return false;
-    }
-  }
-
-  Future<bool> forgotPassword(String email) async {
-    state = state.copyWith(isLoading: true, errorMessage: null);
-    try {
-      await repository.forgotPassword(email);
-      state = state.copyWith(isLoading: false, errorMessage: null);
+      await repository.signInAnonymously(displayName);
       return true;
     } catch (error) {
       state = state.copyWith(isLoading: false, errorMessage: error.toString());
