@@ -77,7 +77,7 @@ class AuthRepository {
 
     final user = response.user;
     if (user == null) {
-      throw StateError('SafeCircle could not create your device account.');
+      throw StateError('KinOrbit could not create your device account.');
     }
   }
 

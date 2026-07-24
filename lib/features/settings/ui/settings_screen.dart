@@ -83,7 +83,7 @@ class _SettingsContent extends ConsumerWidget {
         _sectionTitle('Profile'),
         ListTile(
           leading: const CircleAvatar(child: Icon(Icons.person)),
-          title: Text(authState.user?.displayName ?? 'SafeCircle member'),
+          title: Text(authState.user?.displayName ?? 'KinOrbit member'),
           subtitle: const Text(
             'No email or password. This account is currently stored on this device.',
           ),
@@ -111,7 +111,7 @@ class _SettingsContent extends ConsumerWidget {
         SwitchListTile(
           value: notificationData.pushEnabled,
           title: const Text('Push notifications'),
-          subtitle: const Text('Allow SafeCircle alerts to reach your device.'),
+          subtitle: const Text('Allow KinOrbit alerts to reach your device.'),
           onChanged: (value) =>
               ref.read(safeCircleNotificationControllerProvider).setPushEnabled(value),
         ),
@@ -155,7 +155,7 @@ class _SettingsContent extends ConsumerWidget {
         SwitchListTile(
           value: settings.isSharingEnabled,
           title: const Text('Location sharing enabled'),
-          subtitle: const Text('Allow SafeCircle to upload your location when you tap Share now.'),
+          subtitle: const Text('Allow KinOrbit to upload your location when you tap Share now.'),
           onChanged: (value) => ref.read(settingsControllerProvider).setSharingEnabled(value),
         ),
         SwitchListTile(
@@ -355,7 +355,7 @@ class _SettingsContent extends ConsumerWidget {
         const SizedBox(height: 16),
         const Text(
           'Store configuration is explicit: product IDs are read from environment values, not hardcoded. '
-          'SafeCircle keeps tracking controls visible and user-initiated at all times.',
+          'KinOrbit keeps tracking controls visible and user-initiated at all times.',
           style: TextStyle(color: Colors.grey),
         ),
         const SizedBox(height: 24),
@@ -424,7 +424,7 @@ class _SettingsContent extends ConsumerWidget {
         return AlertDialog(
           title: const Text('Enable background location sharing'),
           content: const Text(
-            'SafeCircle uses background location to keep family visibility active when your app is not open. '
+            'KinOrbit uses background location to keep family visibility active when your app is not open. '
             'This is used only for live family sharing and only while your location sharing is enabled. '
             'You can disable this at any time. A visible background status is always shown.',
           ),

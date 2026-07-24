@@ -10,7 +10,7 @@ void main() {
     dotenv.testLoad(fileInput: 'SAFE_CIRCLE_DEMO_MODE=true');
   });
 
-  testWidgets('SafeCircle app widget can be built', (WidgetTester tester) async {
+  testWidgets('KinOrbit app widget can be built', (WidgetTester tester) async {
     await tester.pumpWidget(
       const ProviderScope(
         child: SafeCircleApp(),

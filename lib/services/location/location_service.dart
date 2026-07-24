@@ -86,9 +86,9 @@ class LocationService {
         timeLimit: const Duration(seconds: 20),
         foregroundNotificationConfig: backgroundEnabled
             ? const ForegroundNotificationConfig(
-                notificationTitle: 'SafeCircle GPS is tracking',
+                notificationTitle: 'KinOrbit is tracking',
                 notificationText: 'Family location sharing is active in background.',
-                notificationChannelName: 'SafeCircle GPS Background',
+                notificationChannelName: 'KinOrbit Background',
                 setOngoing: true,
               )
             : null,

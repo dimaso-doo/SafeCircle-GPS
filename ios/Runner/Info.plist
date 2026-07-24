@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>SafeCircle GPS</string>
+	<string>KinOrbit</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -40,11 +40,11 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>SafeCircle GPS uses background location so your family can stay aware when this app is not open.</string>
+	<string>KinOrbit uses background location so your family can stay aware when this app is not open.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
-	<string>SafeCircle GPS uses always permission to keep live sharing active for family safety in background.</string>
+	<string>KinOrbit uses always permission to keep live sharing active for family safety in background.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>SafeCircle GPS uses your location in foreground so you can see your circle and share live position.</string>
+	<string>KinOrbit uses your location in foreground so you can see your circle and share live position.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIBackgroundModes</key>

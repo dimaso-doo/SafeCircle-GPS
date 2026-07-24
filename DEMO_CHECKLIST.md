@@ -1,4 +1,4 @@
-# SafeCircle GPS Demo Checklist
+# KinOrbit Demo Checklist
 
 ## 1) Name-only onboarding test
 - Open app in clean state.

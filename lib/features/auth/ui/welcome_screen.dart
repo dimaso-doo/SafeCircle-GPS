@@ -38,7 +38,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
       SnackBar(
         content: Text(
           ref.read(authControllerProvider).errorMessage ??
-              'SafeCircle could not start. Please try again.',
+              'KinOrbit could not start. Please try again.',
         ),
       ),
     );
@@ -78,7 +78,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      'SafeCircle GPS',
+                      'KinOrbit',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                             fontWeight: FontWeight.w800,

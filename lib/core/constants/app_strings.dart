@@ -95,5 +95,5 @@ class AppConfig {
     _forcedDemoMode = true;
   }
 
-  static const String appName = 'SafeCircle GPS';
+  static const String appName = 'KinOrbit';
 }

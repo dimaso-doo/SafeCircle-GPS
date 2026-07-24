@@ -34,7 +34,7 @@ class _LocationPermissionGateState extends ConsumerState<LocationPermissionGate>
             mainAxisSize: MainAxisSize.min,
             children: [
               const Text(
-                'SafeCircle GPS needs foreground location to show your current position and to share updates inside your approved circle.',
+                'KinOrbit needs foreground location to show your current position and to share updates inside your approved circle.',
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
@@ -102,7 +102,7 @@ class _RequestState extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text(
-              'Tap Continue to allow SafeCircle to read your foreground location.',
+              'Tap Continue to allow KinOrbit to read your foreground location.',
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),

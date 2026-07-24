@@ -1,6 +1,11 @@
-# SafeCircle GPS (Flutter + Supabase MVP)
+# KinOrbit (Flutter + Supabase MVP)
 
-SafeCircle GPS is a privacy-first family location sharing app. This branch now includes name-only anonymous authentication, circle-based sharing, live foreground sharing, and optional background sharing controls.
+KinOrbit is a privacy-first family location sharing app. This branch now includes name-only anonymous authentication, circle-based sharing, live foreground sharing, and optional background sharing controls.
+
+The public product name is **KinOrbit**. Existing identifiers such as
+`com.safecircle.gps`, the Supabase project name, and Firebase project ID remain
+unchanged to preserve compatibility with the already configured infrastructure
+and Google Play release.
 
 ## Demo-ready setup
 
