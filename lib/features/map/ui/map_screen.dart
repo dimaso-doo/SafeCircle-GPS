@@ -734,29 +734,25 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     if (positionState.hasError) {
       return ErrorState(message: positionState.error.toString());
     }
-    if (canShareMembership.isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (canShareMembership.hasError) {
-      return ErrorState(message: canShareMembership.error.toString());
-    }
-
     final settings = settingsState.valueOrNull;
     final canShare = canShareMembership.valueOrNull ?? false;
-
-    if (!canShare || _memberIds.isEmpty) {
-      return const EmptyState(
-        message:
-            'You are not in an accepted circle yet. Join via invite code first, then share your location.',
-      );
-    }
-
     final position = positionState.asData?.value;
 
     return Column(
       children: [
-        _sharingStatusBar(settings),
-        _sharingControls(settings),
+        if (canShare) _sharingStatusBar(settings),
+        if (canShare)
+          _sharingControls(settings)
+        else
+          Container(
+            width: double.infinity,
+            color: Theme.of(context).colorScheme.primaryContainer,
+            padding: const EdgeInsets.all(12),
+            child: const Text(
+              'Your location is private. Add family when you are ready to share.',
+              textAlign: TextAlign.center,
+            ),
+          ),
         Expanded(child: _memberMap(position, members, safeZones)),
       ],
     );
@@ -829,6 +825,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
     final markers = _buildMarkers(currentPosition, members);
     final safeZoneCircles = _buildSafeZoneCircles(safeZones);
+    final currentUserId = ref.read(authControllerProvider).user?.id;
+    final currentMarkerId =
+        currentUserId != null && _memberLocations.containsKey(currentUserId)
+            ? currentUserId
+            : 'current_user';
     LatLng start;
 
     if (markers.isNotEmpty) {
@@ -846,6 +847,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         if (!_mapController.isCompleted) {
           _mapController.complete(controller);
         }
+        unawaited(
+          controller.showMarkerInfoWindow(MarkerId(currentMarkerId)),
+        );
       },
       myLocationEnabled: true,
       myLocationButtonEnabled: true,
@@ -922,7 +926,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                           itemBuilder: (context, index) {
                             if (locations.isEmpty) {
                               return _locationPreviewTile(
-                                name: 'You',
+                                name: _currentUserDisplayName(),
                                 latitude: currentPosition!.latitude,
                                 longitude: currentPosition.longitude,
                                 isCurrentUser: true,
@@ -934,7 +938,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                             final currentUserId = ref.read(authControllerProvider).user?.id;
                             final isCurrentUser = entry.key == currentUserId;
                             final name = isCurrentUser
-                                ? 'You'
+                                ? _currentUserDisplayName()
                                 : member?.displayName?.trim().isNotEmpty == true
                                     ? member!.displayName!.trim()
                                     : 'Circle member';
@@ -1005,12 +1009,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final markers = <Marker>{};
     final memberById = {for (final member in members) member.userId: member};
     final currentUserId = ref.read(authControllerProvider).user?.id;
+    final currentUserName = _currentUserDisplayName();
 
     for (final entry in _memberLocations.entries) {
       final member = memberById[entry.key];
       final isCurrentUser = entry.key == currentUserId;
       final title = isCurrentUser
-          ? 'You'
+          ? currentUserName
           : (member?.displayName?.trim().isNotEmpty == true
               ? member!.displayName!.trim()
               : 'Member ${entry.key.substring(0, entry.key.length < 4 ? entry.key.length : 4)}');
@@ -1039,12 +1044,17 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           markerId: const MarkerId('current_user'),
           position: LatLng(currentPosition.latitude, currentPosition.longitude),
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
-          infoWindow: const InfoWindow(title: 'You'),
+          infoWindow: InfoWindow(title: currentUserName),
         ),
       );
     }
 
     return markers;
+  }
+
+  String _currentUserDisplayName() {
+    final name = ref.read(authControllerProvider).user?.displayName?.trim();
+    return name?.isNotEmpty == true ? name! : 'You';
   }
 
   String _zoneMessage(String zoneName, String eventType) {
