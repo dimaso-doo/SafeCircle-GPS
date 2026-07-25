@@ -1,3 +1,4 @@
+import '../core/config/release_access.dart';
 import 'subscription_plan.dart';
 
 class UserSubscriptionState {
@@ -27,7 +28,7 @@ class UserSubscriptionState {
   final bool canUseSos;
   final bool canUsePriorityUpdates;
 
-  bool get isPremium => plan.isPremium;
+  bool get isPremium => plan.isPremium || ReleaseAccess.closedTestFullAccess;
   bool get isActive =>
       status == 'active' ||
       status == 'trialing' ||
@@ -40,19 +41,26 @@ class UserSubscriptionState {
   int get freeHistoryRetentionHours => 24;
 
   bool canCreateOrJoinCircle(int currentCircleCount) {
-    return currentCircleCount < maxCircles;
+    return currentCircleCount <
+        (ReleaseAccess.closedTestFullAccess ? 100 : maxCircles);
   }
 
   bool canAddMemberInCircle(int currentMembers) {
-    return currentMembers < maxMembersPerCircle;
+    return currentMembers <
+        (ReleaseAccess.closedTestFullAccess ? 100 : maxMembersPerCircle);
   }
 
   bool canKeepHistoryHours(int requestedHours) {
-    return requestedHours <= maxHistoryRetentionHours;
+    return requestedHours <=
+        (ReleaseAccess.closedTestFullAccess ? 720 : maxHistoryRetentionHours);
   }
 
   bool canSelectHistoryHours(int requestedHours) {
-    return requestedHours <= maxHistoryRetentionHours && requestedHours >= freeHistoryRetentionHours;
+    return requestedHours <=
+            (ReleaseAccess.closedTestFullAccess
+                ? 720
+                : maxHistoryRetentionHours) &&
+        requestedHours >= freeHistoryRetentionHours;
   }
 
   bool canUsePriorityInterval(int seconds) {
@@ -74,6 +82,7 @@ class UserSubscriptionState {
   }
 
   String planDescription() {
+    if (ReleaseAccess.closedTestFullAccess) return 'Closed test access';
     if (isPremium) return 'Premium';
     return 'Free';
   }

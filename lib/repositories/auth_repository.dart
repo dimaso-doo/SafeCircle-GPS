@@ -113,4 +113,20 @@ class AuthRepository {
     }
     await _ensureClient().auth.signOut();
   }
+
+  Future<void> deleteAccount() async {
+    if (AppConfig.runInDemoMode) {
+      await DemoBackend.shared.deleteCurrentAccount();
+      return;
+    }
+
+    final client = _ensureClient();
+    await client.functions.invoke('delete-account');
+
+    try {
+      await client.auth.signOut(scope: SignOutScope.local);
+    } catch (_) {
+      // Server-side deletion invalidates the session immediately.
+    }
+  }
 }

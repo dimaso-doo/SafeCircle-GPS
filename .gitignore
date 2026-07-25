@@ -41,3 +41,7 @@ ios/Runner.xcworkspace/xcshareddata/swiftpm/Package.resolved
 .vscode/
 *.iml
 *.swp
+
+# Separately deployed store-review site and temporary release archives
+privacy-site/
+kinorbit-privacy-*.tar.gz

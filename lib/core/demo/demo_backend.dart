@@ -71,6 +71,10 @@ class DemoBackend {
     _authStreamController.add(null);
   }
 
+  Future<void> deleteCurrentAccount() async {
+    await signOut();
+  }
+
   Future<bool> hasUser() async {
     return _activeUser != null;
   }

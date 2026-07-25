@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/config/legal_links.dart';
 import '../../../core/widgets/empty_states.dart';
 import '../../../features/auth/providers/auth_provider.dart';
 import '../../../features/map/providers/map_provider.dart';
@@ -227,20 +229,47 @@ class _SettingsContent extends ConsumerWidget {
             'Recent family history is kept for 24 hours in the current version.',
           ),
         ),
+        const Divider(height: 24),
+        _sectionTitle('Privacy and account'),
+        ListTile(
+          leading: const Icon(Icons.privacy_tip_outlined),
+          title: const Text('Privacy policy'),
+          subtitle: const Text(
+            'See how KinOrbit uses location and protects circle data.',
+          ),
+          trailing: const Icon(Icons.open_in_new),
+          onTap: () => _openLegalLink(
+            context,
+            LegalLinks.privacyPolicyUrl,
+          ),
+        ),
+        ListTile(
+          leading: const Icon(Icons.manage_accounts_outlined),
+          title: const Text('Account deletion information'),
+          subtitle: const Text(
+            'Review what is removed when an account is deleted.',
+          ),
+          trailing: const Icon(Icons.open_in_new),
+          onTap: () => _openLegalLink(
+            context,
+            LegalLinks.accountDeletionUrl,
+          ),
+        ),
         const SizedBox(height: 24),
         ElevatedButton.icon(
-          icon: const Icon(Icons.logout),
-          label: const Text('Remove account from this device'),
+          icon: const Icon(Icons.delete_forever_outlined),
+          label: const Text('Delete my account and data'),
           onPressed: authState.isLoading
               ? null
               : () async {
-                  final shouldSignOut = await showDialog<bool>(
+                  final shouldDelete = await showDialog<bool>(
                     context: context,
                     builder: (dialogContext) => AlertDialog(
-                      title: const Text('Remove this device account?'),
+                      title: const Text('Delete account permanently?'),
                       content: const Text(
-                        'Because this account has no email or password, you may '
-                        'not be able to recover its circles and history after signing out.',
+                        'This permanently removes your profile, circle data, '
+                        'location history, safe zones, and sharing settings. '
+                        'This action cannot be undone.',
                       ),
                       actions: [
                         TextButton(
@@ -249,12 +278,12 @@ class _SettingsContent extends ConsumerWidget {
                         ),
                         FilledButton(
                           onPressed: () => Navigator.of(dialogContext).pop(true),
-                          child: const Text('Remove'),
+                          child: const Text('Delete permanently'),
                         ),
                       ],
                     ),
                   );
-                  if (shouldSignOut != true) {
+                  if (shouldDelete != true) {
                     return;
                   }
                   try {
@@ -262,7 +291,18 @@ class _SettingsContent extends ConsumerWidget {
                         .read(safeCircleNotificationControllerProvider)
                         .deactivateCurrentDeviceToken();
                   } finally {
-                    await ref.read(authControllerProvider.notifier).signOut();
+                    final deleted = await ref
+                        .read(authControllerProvider.notifier)
+                        .deleteAccount();
+                    if (!deleted && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Account could not be deleted. Please try again.',
+                          ),
+                        ),
+                      );
+                    }
                   }
                 },
         ),
@@ -274,6 +314,21 @@ class _SettingsContent extends ConsumerWidget {
         const SizedBox(height: 24),
       ],
     );
+  }
+
+  Future<void> _openLegalLink(BuildContext context, String value) async {
+    final uri = Uri.tryParse(value);
+    final opened = uri != null &&
+        uri.hasScheme &&
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+
+    if (!opened && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('This legal page is not configured yet.'),
+        ),
+      );
+    }
   }
 
   Future<void> _handleBackgroundToggle(

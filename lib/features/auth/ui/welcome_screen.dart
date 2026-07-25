@@ -137,7 +137,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                     const SizedBox(height: 10),
                     TextFormField(
                       controller: _nameController,
-                      autofocus: true,
+                      autofocus: false,
                       maxLength: 50,
                       textCapitalization: TextCapitalization.words,
                       textInputAction: TextInputAction.done,

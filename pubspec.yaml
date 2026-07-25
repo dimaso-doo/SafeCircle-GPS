@@ -1,7 +1,7 @@
 name: safe_circle_gps
 description: Privacy-first family GPS location sharing MVP.
 publish_to: 'none'
-version: 0.2.0+6
+version: 0.2.1+7
 
 environment:
   sdk: '>=3.4.0 <4.0.0'
@@ -21,6 +21,7 @@ dependencies:
   uuid: ^4.5.1
   cupertino_icons: ^1.0.8
   flutter_dotenv: ^5.2.1
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:
