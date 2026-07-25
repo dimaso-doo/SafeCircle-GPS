@@ -3,12 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/widgets/empty_states.dart';
 import '../../history/ui/history_screen.dart';
+import '../../map/providers/map_provider.dart';
 import '../../notifications/providers/notification_provider.dart';
 import '../../safe_zones/ui/safe_zones_screen.dart';
 import '../providers/circle_providers.dart';
 
 class CirclesScreen extends ConsumerStatefulWidget {
-  const CirclesScreen({super.key});
+  const CirclesScreen({super.key, required this.onFamilyReady});
+
+  final VoidCallback onFamilyReady;
 
   @override
   ConsumerState<CirclesScreen> createState() => _CirclesScreenState();
@@ -39,6 +42,7 @@ class _CirclesScreenState extends ConsumerState<CirclesScreen> {
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Circle created.')));
+      widget.onFamilyReady();
     } catch (error) {
       if (!mounted) return;
       final message = error.toString().contains('plan allows')
@@ -64,7 +68,7 @@ class _CirclesScreenState extends ConsumerState<CirclesScreen> {
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Joined circle.')));
-      await _offerNotifications();
+      widget.onFamilyReady();
     } catch (error) {
       if (!mounted) return;
       final message = error.toString().contains('plan allows')
@@ -183,7 +187,10 @@ class _CirclesScreenState extends ConsumerState<CirclesScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () {
+                ref.read(pendingSharingIntentProvider.notifier).state = false;
+                Navigator.of(context).pop();
+              },
               child: const Text('Cancel'),
             ),
             FilledButton(
@@ -215,7 +222,10 @@ class _CirclesScreenState extends ConsumerState<CirclesScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () {
+                ref.read(pendingSharingIntentProvider.notifier).state = false;
+                Navigator.of(context).pop();
+              },
               child: const Text('Cancel'),
             ),
             FilledButton(

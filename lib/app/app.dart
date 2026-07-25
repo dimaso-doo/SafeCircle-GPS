@@ -37,8 +37,8 @@ class _SafeCircleAppState extends ConsumerState<SafeCircleApp> {
     }
 
     final pages = [
-      MapScreen(onAddFamily: () => setState(() => _tabIndex = 1)),
-      const CirclesScreen(),
+      MapScreen(onOpenFamily: () => setState(() => _tabIndex = 1)),
+      CirclesScreen(onFamilyReady: () => setState(() => _tabIndex = 0)),
       const SettingsScreen(),
     ];
 

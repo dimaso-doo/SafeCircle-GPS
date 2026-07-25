@@ -31,6 +31,8 @@ final backgroundPermissionGrantedProvider = FutureProvider<bool>((ref) async {
   return permission == LocationPermission.always;
 });
 
+final pendingSharingIntentProvider = StateProvider<bool>((_) => false);
+
 final currentPositionProvider = FutureProvider.autoDispose<Position>((ref) async {
   if (AppConfig.runInDemoMode) {
     final user = ref.watch(authControllerProvider).user;

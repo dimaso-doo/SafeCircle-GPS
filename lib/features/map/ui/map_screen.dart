@@ -23,9 +23,9 @@ import '../providers/map_provider.dart';
 import 'location_permission_gate.dart';
 
 class MapScreen extends ConsumerStatefulWidget {
-  const MapScreen({super.key, required this.onAddFamily});
+  const MapScreen({super.key, required this.onOpenFamily});
 
-  final VoidCallback onAddFamily;
+  final VoidCallback onOpenFamily;
 
   @override
   ConsumerState<MapScreen> createState() => _MapScreenState();
@@ -610,35 +610,77 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final settings = settingsState.valueOrNull;
     final canShare = canShareMembership.valueOrNull ?? false;
     final position = positionState.asData?.value;
+    final pendingSharingIntent = ref.watch(pendingSharingIntentProvider);
+
+    if (canShare &&
+        pendingSharingIntent &&
+        settings?.canShare != true &&
+        !_isShareActionRunning) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted ||
+            !ref.read(pendingSharingIntentProvider) ||
+            _isShareActionRunning) {
+          return;
+        }
+        ref.read(pendingSharingIntentProvider.notifier).state = false;
+        _startSharing();
+      });
+    }
 
     return Column(
       children: [
         if (canShare)
           _sharingControls(settings)
         else
-          Card(
-            margin: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  const Expanded(
-                    child: Text(
-                      'Only you can see this location. Add family when you are ready to share.',
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  FilledButton.icon(
-                    onPressed: widget.onAddFamily,
-                    icon: const Icon(Icons.person_add_alt_1),
-                    label: const Text('Add family'),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          _sharingSetupControls(pendingSharingIntent),
         Expanded(child: _memberMap(position, members, safeZones)),
       ],
+    );
+  }
+
+  Widget _sharingSetupControls(bool pendingSharingIntent) {
+    return Card(
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.location_off_outlined),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Location sharing is off',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        pendingSharingIntent
+                            ? 'Create or join a family to finish setup.'
+                            : 'You choose when your family can see you.',
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              onPressed: () {
+                ref.read(pendingSharingIntentProvider.notifier).state = true;
+                widget.onOpenFamily();
+              },
+              icon: const Icon(Icons.play_arrow),
+              label: const Text('Start sharing'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
