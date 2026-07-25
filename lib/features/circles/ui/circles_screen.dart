@@ -78,55 +78,60 @@ class _CirclesScreenState extends ConsumerState<CirclesScreen> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (context) {
-        final members = ref.watch(circleMembersProvider(circleId));
-        return Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Circle members',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 320,
-                child: members.when(
-                  data: (membersList) {
-                    if (membersList.isEmpty) {
-                      return const EmptyState(message: 'No members yet.');
-                    }
-                    return ListView.separated(
-                      itemCount: membersList.length,
-                      separatorBuilder: (_, __) => const Divider(height: 1),
-                      itemBuilder: (context, index) {
-                        final member = membersList[index];
-                        return ListTile(
-                          leading: CircleAvatar(
-                            child: Text(
-                              (member.displayName?.isNotEmpty == true)
-                                  ? member.displayName!.substring(0, 1).toUpperCase()
-                                  : '?',
-                            ),
-                          ),
-                          title: Text(member.displayName ?? 'Unknown'),
-                          subtitle: Text(
-                            '${member.role}${member.isAccepted ? ' · Accepted' : ' · Pending'}',
-                          ),
-                        );
-                      },
-                    );
-                  },
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (error, _) => ErrorState(message: error.toString()),
+      builder: (_) => Consumer(
+        builder: (context, ref, __) {
+          final members = ref.watch(circleMembersProvider(circleId));
+          return Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Circle members',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-              ),
-            ],
-          ),
-        );
-      },
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 320,
+                  child: members.when(
+                    data: (membersList) {
+                      if (membersList.isEmpty) {
+                        return const EmptyState(message: 'No members yet.');
+                      }
+                      return ListView.separated(
+                        itemCount: membersList.length,
+                        separatorBuilder: (_, __) => const Divider(height: 1),
+                        itemBuilder: (context, index) {
+                          final member = membersList[index];
+                          return ListTile(
+                            leading: CircleAvatar(
+                              child: Text(
+                                (member.displayName?.isNotEmpty == true)
+                                    ? member.displayName!
+                                        .substring(0, 1)
+                                        .toUpperCase()
+                                    : '?',
+                              ),
+                            ),
+                            title: Text(member.displayName ?? 'Unknown'),
+                            subtitle: Text(
+                              '${member.role}${member.isAccepted ? ' · Accepted' : ' · Pending'}',
+                            ),
+                          );
+                        },
+                      );
+                    },
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (error, _) => ErrorState(message: error.toString()),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 

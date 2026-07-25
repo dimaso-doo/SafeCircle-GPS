@@ -651,28 +651,59 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
     return Card(
       margin: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-      child: SwitchListTile(
-        value: isSharing,
-        onChanged: canToggle
-            ? (enabled) {
-                if (enabled) {
-                  _startSharing();
-                } else {
-                  _stopSharing();
-                }
-              }
-            : null,
-        secondary: Icon(
-          isSharing ? Icons.location_on : Icons.location_off_outlined,
-          color: isSharing ? Colors.green.shade700 : null,
-        ),
-        title: Text(
-          isSharing ? 'Location sharing is active' : 'Share my location',
-        ),
-        subtitle: Text(
-          isSharing
-              ? 'Accepted family members can see your live location.'
-              : 'Sharing stays off until you turn it on.',
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  isSharing ? Icons.location_on : Icons.location_off_outlined,
+                  color: isSharing ? Colors.green.shade700 : null,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isSharing
+                            ? 'Location sharing is active'
+                            : 'Location sharing is off',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        isSharing
+                            ? 'Accepted family members can see your live location.'
+                            : 'Press Start sharing when you want family to see you.',
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              onPressed: canToggle
+                  ? () {
+                      if (isSharing) {
+                        _stopSharing();
+                      } else {
+                        _startSharing();
+                      }
+                    }
+                  : null,
+              icon: _isShareActionRunning
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Icon(isSharing ? Icons.stop_circle_outlined : Icons.play_arrow),
+              label: Text(isSharing ? 'Stop sharing' : 'Start sharing'),
+            ),
+          ],
         ),
       ),
     );
