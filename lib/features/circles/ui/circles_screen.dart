@@ -41,8 +41,11 @@ class _CirclesScreenState extends ConsumerState<CirclesScreen> {
           .showSnackBar(const SnackBar(content: Text('Circle created.')));
     } catch (error) {
       if (!mounted) return;
+      final message = error.toString().contains('plan allows')
+          ? 'You already have a family. Share its invite code to add another person.'
+          : 'Unable to create family. Please try again.';
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Create failed: ${error.toString()}')),
+        SnackBar(content: Text(message)),
       );
     } finally {
       if (mounted) setState(() => _isCreating = false);
@@ -64,8 +67,11 @@ class _CirclesScreenState extends ConsumerState<CirclesScreen> {
       await _offerNotifications();
     } catch (error) {
       if (!mounted) return;
+      final message = error.toString().contains('plan allows')
+          ? 'You already belong to a family.'
+          : 'Unable to join family. Check the invite code and try again.';
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Join failed: ${error.toString()}')),
+        SnackBar(content: Text(message)),
       );
     } finally {
       if (mounted) setState(() => _isJoining = false);
@@ -170,7 +176,7 @@ class _CirclesScreenState extends ConsumerState<CirclesScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Create Circle'),
+          title: const Text('Create family'),
           content: TextField(
             controller: _nameController,
             decoration: const InputDecoration(labelText: 'Family/Circle name'),
@@ -201,7 +207,7 @@ class _CirclesScreenState extends ConsumerState<CirclesScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Join Circle'),
+          title: const Text('Join family'),
           content: TextField(
             controller: _codeController,
             textInputAction: TextInputAction.done,
@@ -276,17 +282,28 @@ class _CirclesScreenState extends ConsumerState<CirclesScreen> {
                   ),
                 const SizedBox(height: 16),
               ],
-              FilledButton.icon(
-                onPressed: _openCreateDialog,
-                icon: const Icon(Icons.add),
-                label: const Text('Create family'),
-              ),
-              const SizedBox(height: 10),
-              OutlinedButton.icon(
-                onPressed: _openJoinDialog,
-                icon: const Icon(Icons.group_add_outlined),
-                label: const Text('Join with invite code'),
-              ),
+              if (items.isEmpty) ...[
+                FilledButton.icon(
+                  onPressed: _openCreateDialog,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Create family'),
+                ),
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  onPressed: _openJoinDialog,
+                  icon: const Icon(Icons.group_add_outlined),
+                  label: const Text('Join with invite code'),
+                ),
+              ] else
+                const Card(
+                  child: ListTile(
+                    leading: Icon(Icons.lock_outline),
+                    title: Text('Your family is private'),
+                    subtitle: Text(
+                      'To add someone, share the invite code shown above.',
+                    ),
+                  ),
+                ),
               if (items.isNotEmpty) ...[
                 const SizedBox(height: 28),
                 const Text(

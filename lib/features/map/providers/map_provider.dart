@@ -68,9 +68,11 @@ final activeMapMembersProvider = FutureProvider.autoDispose<List<CircleMember>>(
   return members.where((member) => member.isAccepted).toList(growable: false);
 });
 
-final canShareLocationProvider = FutureProvider<bool>((ref) async {
+final canShareLocationProvider = FutureProvider.autoDispose<bool>((ref) async {
   final user = ref.watch(authControllerProvider).user;
   if (user == null) return false;
-  final repository = ref.watch(circleRepositoryProvider);
-  return repository.currentUserCanShare(user.id);
+  final members = await ref.watch(activeMapMembersProvider.future);
+  return members.any(
+    (member) => member.userId == user.id && member.isAccepted,
+  );
 });
