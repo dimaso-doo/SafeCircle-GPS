@@ -36,8 +36,8 @@ class UserSubscriptionState {
 
   String get planName => plan.name;
   String get planSlug => plan.slug;
-  int get minFreeUpdateIntervalSeconds => 30;
-  int get minFreeDistanceFilterMeters => 100;
+  int get minFreeUpdateIntervalSeconds => 10;
+  int get minFreeDistanceFilterMeters => 10;
   int get freeHistoryRetentionHours => 24;
 
   bool canCreateOrJoinCircle(int currentCircleCount) {

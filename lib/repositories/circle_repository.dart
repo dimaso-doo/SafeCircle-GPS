@@ -110,6 +110,58 @@ class CircleRepository {
     });
   }
 
+  Future<void> deleteCircle({
+    required String circleId,
+    required String requesterId,
+  }) async {
+    if (AppConfig.runInDemoMode) {
+      return DemoBackend.shared.deleteCircle(
+        circleId: circleId,
+        requesterId: requesterId,
+      );
+    }
+
+    await _client!.from('circles').delete().eq('id', circleId);
+  }
+
+  Future<void> leaveCircle({
+    required String circleId,
+    required String userId,
+  }) async {
+    if (AppConfig.runInDemoMode) {
+      return DemoBackend.shared.leaveCircle(
+        circleId: circleId,
+        userId: userId,
+      );
+    }
+
+    await _client!
+        .from('circle_members')
+        .delete()
+        .eq('circle_id', circleId)
+        .eq('user_id', userId);
+  }
+
+  Future<void> removeMember({
+    required String circleId,
+    required String memberUserId,
+    required String requesterId,
+  }) async {
+    if (AppConfig.runInDemoMode) {
+      return DemoBackend.shared.removeCircleMember(
+        circleId: circleId,
+        memberUserId: memberUserId,
+        requesterId: requesterId,
+      );
+    }
+
+    await _client!
+        .from('circle_members')
+        .delete()
+        .eq('circle_id', circleId)
+        .eq('user_id', memberUserId);
+  }
+
   Future<List<CircleMember>> getMembersForCircle(String circleId) async {
     if (AppConfig.runInDemoMode) {
       return DemoBackend.shared.getMembersForCircle(circleId);

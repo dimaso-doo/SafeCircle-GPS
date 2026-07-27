@@ -39,6 +39,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   String? _activeCircleId;
   String? _activeMembersSignature;
   bool _isTrackingSessionActive = false;
+  bool _isStartingLocationStream = false;
   bool _isShareActionRunning = false;
   DateTime? _lastUploadAt;
   List<SafeZone> _safeZones = const <SafeZone>[];
@@ -183,6 +184,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       schema: 'public',
       table: 'location_updates',
       callback: (dynamic payload) {
+        if (!mounted) return;
         final record = payload.newRecord as Map<String, dynamic>?;
         if (record == null) return;
 
@@ -303,105 +305,112 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   }
 
   Future<void> _startLocationStream() async {
-    if (_isTrackingSessionActive) {
+    if (_isTrackingSessionActive || _isStartingLocationStream) {
       return;
     }
 
-    final user = ref.read(authControllerProvider).user;
-    if (user == null) return;
+    _isStartingLocationStream = true;
+    try {
+      final user = ref.read(authControllerProvider).user;
+      if (user == null) return;
 
-    final settings = await ref.read(mapLocationSettingsProvider.future);
-    if (!settings.canShare) {
-      throw StateError('Location sharing is disabled.');
-    }
+      final settings = await ref.read(mapLocationSettingsProvider.future);
+      if (!settings.canShare) {
+        throw StateError('Location sharing is disabled.');
+      }
 
-    final repository = ref.read(mapLocationRepositoryProvider);
-    final service = ref.read(locationServiceProvider);
-    final effectiveInterval = Duration(seconds: settings.effectiveUpdateIntervalSeconds);
-    final effectiveDistanceFilter = settings.effectiveDistanceFilterMeters;
-    _lastUploadAt = null;
+      final repository = ref.read(mapLocationRepositoryProvider);
+      final service = ref.read(locationServiceProvider);
+      final effectiveInterval =
+          Duration(seconds: settings.effectiveUpdateIntervalSeconds);
+      final effectiveDistanceFilter = settings.effectiveDistanceFilterMeters;
+      _lastUploadAt = null;
 
-    if (AppConfig.runInDemoMode) {
-      await _startDemoLocationStream(
-        userId: user.id,
-        repository: repository,
-        interval: effectiveInterval,
-        distanceFilterMeters: effectiveDistanceFilter,
-      );
-      return;
-    }
-
-    await _stopTrackingStream();
-    _isTrackingSessionActive = true;
-    if (mounted) {
-      setState(() {});
-    }
-
-    _shareSubscription = service
-        .locationUpdates(
-          backgroundEnabled: settings.isTrackingInBackgroundAllowed,
-          distanceFilterMeters: effectiveDistanceFilter,
-          updateInterval: effectiveInterval,
-          batterySavingMode: settings.isBatterySavingMode,
-        )
-        .listen((position) async {
-    final now = DateTime.now().toUtc();
-    if (_lastUploadAt != null &&
-        now.difference(_lastUploadAt!).inSeconds <
-            settings.effectiveUpdateIntervalSeconds) {
-      return;
-    }
-      _lastUploadAt = now;
-
-      try {
-        final currentSettings = await ref.read(mapLocationSettingsProvider.future);
-        if (!mounted || !currentSettings.canShare) {
-          await _stopTrackingStream();
-          return;
-        }
-
-        final batteryLevel = await service.batteryLevel();
-        if (mounted) {
-          await _handleSafeZoneTransitions(
-            user.id,
-            position,
-            eventTime: now,
-          );
-        }
-        await repository.uploadLocationUpdate(
+      if (AppConfig.runInDemoMode) {
+        await _startDemoLocationStream(
           userId: user.id,
-          position: position,
-          batteryLevel: batteryLevel,
+          repository: repository,
+          interval: effectiveInterval,
+          distanceFilterMeters: effectiveDistanceFilter,
         );
+        return;
+      }
 
+      await _stopTrackingStream();
+      _isTrackingSessionActive = true;
+      if (mounted) {
+        setState(() {});
+      }
+
+      _shareSubscription = service
+          .locationUpdates(
+            backgroundEnabled: settings.isTrackingInBackgroundAllowed,
+            distanceFilterMeters: effectiveDistanceFilter,
+            updateInterval: effectiveInterval,
+            batterySavingMode: settings.isBatterySavingMode,
+          )
+          .listen((position) async {
+        final now = DateTime.now().toUtc();
         if (mounted) {
           setState(() {
-            _memberLocations[user.id] = LocationUpdate(
-              id: now.microsecondsSinceEpoch.toString(),
+            _memberLocations[user.id] = _mapMemberLocation(
               userId: user.id,
-              latitude: position.latitude,
-              longitude: position.longitude,
-              altitude: position.altitude,
-              batteryLevel: batteryLevel,
-              accuracy: position.accuracy,
-              speed: position.speed,
-              heading: position.heading,
-              createdAt: now,
+              position: position,
             );
           });
         }
 
-        ref.invalidate(historyProvider);
-      } catch (error) {
-        if (!mounted) return;
-        _showSnack(context, 'Location update failed: ${error.toString()}');
-        return;
-      }
-        }, onError: (error) {
+        if (_lastUploadAt != null &&
+            now.difference(_lastUploadAt!).inSeconds <
+                settings.effectiveUpdateIntervalSeconds) {
+          return;
+        }
+        _lastUploadAt = now;
+
+        try {
+          final currentSettings =
+              await ref.read(mapLocationSettingsProvider.future);
+          if (!mounted || !currentSettings.canShare) {
+            await _stopTrackingStream();
+            return;
+          }
+
+          final batteryLevel = await service.batteryLevel();
+          if (mounted) {
+            await _handleSafeZoneTransitions(
+              user.id,
+              position,
+              eventTime: now,
+            );
+          }
+          await repository.uploadLocationUpdate(
+            userId: user.id,
+            position: position,
+            batteryLevel: batteryLevel,
+          );
+          ref.invalidate(historyProvider);
+        } catch (error) {
+          if (!mounted) return;
+          _showSnack(context, 'Location update failed: ${error.toString()}');
+        }
+      }, onError: (error) {
+        _isTrackingSessionActive = false;
+        if (mounted) {
+          setState(() {});
+          _showSnack(context, 'Location update failed: ${error.toString()}');
+        }
+      }, onDone: () {
+        _isTrackingSessionActive = false;
+        if (mounted) {
+          setState(() {});
+        }
+      });
+    } finally {
+      _isStartingLocationStream = false;
       if (mounted) {
-        _showSnack(context, 'Location update failed: ${error.toString()}');
+        setState(() {});
       }
-    });
+    }
   }
 
   Future<void> _startDemoLocationStream({
@@ -609,6 +618,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
     final settings = settingsState.valueOrNull;
     final canShare = canShareMembership.valueOrNull ?? false;
+    final membershipResolved = canShareMembership.hasValue;
     final position = positionState.asData?.value;
     final pendingSharingIntent = ref.watch(pendingSharingIntentProvider);
 
@@ -624,6 +634,33 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         }
         ref.read(pendingSharingIntentProvider.notifier).state = false;
         _startSharing();
+      });
+    }
+
+    if (membershipResolved &&
+        canShare &&
+        settings?.canShare == true &&
+        !_isTrackingSessionActive &&
+        !_isStartingLocationStream &&
+        !_isShareActionRunning) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted ||
+            _isTrackingSessionActive ||
+            _isStartingLocationStream ||
+            _isShareActionRunning) {
+          return;
+        }
+        unawaited(_startLocationStream());
+      });
+    }
+
+    if (membershipResolved &&
+        !canShare &&
+        settings?.canShare == true &&
+        !_isShareActionRunning) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _isShareActionRunning) return;
+        unawaited(_stopSharing());
       });
     }
 

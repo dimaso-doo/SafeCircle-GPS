@@ -215,6 +215,66 @@ class DemoBackend {
         circleId: circleId, userId: userId, role: 'member', isAccepted: true);
   }
 
+  Future<void> deleteCircle({
+    required String circleId,
+    required String requesterId,
+  }) async {
+    final circle = _circlesById[circleId];
+    if (circle == null) {
+      throw StateError('Family not found.');
+    }
+    if (circle.ownerId != requesterId) {
+      throw StateError('Only the family owner can delete it.');
+    }
+
+    final members = List<String>.from(
+      _memberIdsByCircle[circleId] ?? const <String>[],
+    );
+    for (final userId in members) {
+      _membershipCircleIdsByUser[userId]?.remove(circleId);
+    }
+
+    _circleIdByInviteCode.remove(circle.inviteCode);
+    _inviteByCircleId.remove(circleId);
+    _memberIdsByCircle.remove(circleId);
+    _demoCircleMembershipUsers.remove(circleId);
+    _zonesByCircle.remove(circleId);
+    _safeZoneEventsByCircle.remove(circleId);
+    _circlesById.remove(circleId);
+  }
+
+  Future<void> leaveCircle({
+    required String circleId,
+    required String userId,
+  }) async {
+    final circle = _circlesById[circleId];
+    if (circle == null) {
+      throw StateError('Family not found.');
+    }
+    if (circle.ownerId == userId) {
+      throw StateError('The owner must delete the family instead.');
+    }
+    _removeMemberFromCircle(circleId: circleId, userId: userId);
+  }
+
+  Future<void> removeCircleMember({
+    required String circleId,
+    required String memberUserId,
+    required String requesterId,
+  }) async {
+    final circle = _circlesById[circleId];
+    if (circle == null) {
+      throw StateError('Family not found.');
+    }
+    if (circle.ownerId != requesterId) {
+      throw StateError('Only the family owner can remove members.');
+    }
+    if (circle.ownerId == memberUserId) {
+      throw StateError('The owner cannot be removed.');
+    }
+    _removeMemberFromCircle(circleId: circleId, userId: memberUserId);
+  }
+
   void addMemberToCircle({
     required String circleId,
     required String userId,
@@ -237,6 +297,31 @@ class DemoBackend {
       _zonesByCircle[circleId] = <SafeZone>[];
     }
     _ensureSeedPositions(userId);
+  }
+
+  void _removeMemberFromCircle({
+    required String circleId,
+    required String userId,
+  }) {
+    _memberIdsByCircle[circleId]?.remove(userId);
+    _membershipCircleIdsByUser[userId]?.remove(circleId);
+    _demoCircleMembershipUsers[circleId]?.remove(userId);
+
+    if (_membershipCircleIdsByUser[userId]?.isEmpty == true) {
+      final current = _settingsByUser[userId];
+      if (current != null) {
+        _settingsByUser[userId] = _updatedSettings(
+          userId: userId,
+          isSharingEnabled: false,
+          isPaused: false,
+          isBackgroundSharingEnabled: null,
+          updateIntervalSeconds: null,
+          distanceFilterMeters: null,
+          isBatterySavingMode: null,
+          historyRetentionHours: null,
+        );
+      }
+    }
   }
 
   Future<List<CircleModel>> getCirclesForUser(String userId) async {
@@ -727,8 +812,8 @@ class DemoBackend {
         isSharingEnabled: false,
         isPaused: false,
         isBackgroundSharingEnabled: false,
-        updateIntervalSeconds: 12,
-        distanceFilterMeters: 80,
+        updateIntervalSeconds: 10,
+        distanceFilterMeters: 10,
         isBatterySavingMode: false,
         historyRetentionHours: 24,
         updatedAt: DateTime.now().toUtc(),
@@ -753,8 +838,8 @@ class DemoBackend {
           isSharingEnabled: false,
           isPaused: false,
           isBackgroundSharingEnabled: false,
-          updateIntervalSeconds: 30,
-          distanceFilterMeters: 100,
+          updateIntervalSeconds: 10,
+          distanceFilterMeters: 10,
           isBatterySavingMode: false,
           historyRetentionHours: 24,
           updatedAt: DateTime.now().toUtc(),

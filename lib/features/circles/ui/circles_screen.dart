@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/widgets/empty_states.dart';
+import '../../../features/auth/providers/auth_provider.dart';
+import '../../../models/circle.dart';
 import '../../history/ui/history_screen.dart';
 import '../../map/providers/map_provider.dart';
 import '../../notifications/providers/notification_provider.dart';
@@ -22,6 +24,7 @@ class _CirclesScreenState extends ConsumerState<CirclesScreen> {
   final _codeController = TextEditingController();
   bool _isCreating = false;
   bool _isJoining = false;
+  final Set<String> _busyCircleIds = <String>{};
 
   @override
   void dispose() {
@@ -82,23 +85,25 @@ class _CirclesScreenState extends ConsumerState<CirclesScreen> {
     }
   }
 
-  void _openMembers(String circleId) {
-    ref.read(circleControllerProvider).openCircle(circleId);
+  void _openMembers(CircleModel circle) {
+    final currentUserId = ref.read(authControllerProvider).user?.id;
+    final isOwner = currentUserId == circle.ownerId;
+    ref.read(circleControllerProvider).openCircle(circle.id);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (_) => Consumer(
+      builder: (sheetContext) => Consumer(
         builder: (context, ref, __) {
-          final members = ref.watch(circleMembersProvider(circleId));
+          final members = ref.watch(circleMembersProvider(circle.id));
           return Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
-                  'Circle members',
+                Text(
+                  '${circle.name} members',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 12),
@@ -128,6 +133,21 @@ class _CirclesScreenState extends ConsumerState<CirclesScreen> {
                             subtitle: Text(
                               '${member.role}${member.isAccepted ? ' · Accepted' : ' · Pending'}',
                             ),
+                            trailing: isOwner &&
+                                    member.userId != currentUserId
+                                ? IconButton(
+                                    tooltip: 'Remove member',
+                                    icon: const Icon(
+                                      Icons.person_remove_outlined,
+                                    ),
+                                    onPressed: () => _confirmRemoveMember(
+                                      circleId: circle.id,
+                                      memberUserId: member.userId,
+                                      memberName:
+                                          member.displayName ?? 'this member',
+                                    ),
+                                  )
+                                : null,
                           );
                         },
                       );
@@ -137,10 +157,235 @@ class _CirclesScreenState extends ConsumerState<CirclesScreen> {
                     error: (error, _) => ErrorState(message: error.toString()),
                   ),
                 ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                    onPressed: () async {
+                      Navigator.of(sheetContext).pop();
+                      if (isOwner) {
+                        await _confirmDeleteCircle(circle);
+                      } else {
+                        await _confirmLeaveCircle(circle);
+                      }
+                    },
+                    icon: Icon(
+                      isOwner
+                          ? Icons.delete_forever_outlined
+                          : Icons.logout,
+                    ),
+                    label: Text(
+                      isOwner ? 'Delete family' : 'Leave family',
+                    ),
+                  ),
+                ),
               ],
             ),
           );
         },
+      ),
+    );
+  }
+
+  Future<void> _confirmDeleteCircle(CircleModel circle) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Delete ${circle.name}?'),
+        content: const Text(
+          'This permanently deletes the family and removes every member from it. '
+          'Its invite code, safe zones and family events will also be removed. '
+          'This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Delete family'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await _runCircleAction(
+      circle.id,
+      action: () =>
+          ref.read(circleControllerProvider).deleteCircle(circle.id),
+      successMessage: '${circle.name} was deleted.',
+    );
+  }
+
+  Future<void> _confirmLeaveCircle(CircleModel circle) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Leave ${circle.name}?'),
+        content: const Text(
+          'You will stop seeing this family and its shared locations. '
+          'The family and its other members will remain.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Leave family'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await _runCircleAction(
+      circle.id,
+      action: () =>
+          ref.read(circleControllerProvider).leaveCircle(circle.id),
+      successMessage: 'You left ${circle.name}.',
+    );
+  }
+
+  Future<void> _confirmRemoveMember({
+    required String circleId,
+    required String memberUserId,
+    required String memberName,
+  }) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Remove $memberName?'),
+        content: const Text(
+          'This member will immediately lose access to this family and its '
+          'shared locations. They can join again later with a valid invite code.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Remove member'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await ref.read(circleControllerProvider).removeMember(
+            circleId: circleId,
+            memberUserId: memberUserId,
+          );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$memberName was removed.')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to remove this member.')),
+      );
+    }
+  }
+
+  Future<void> _runCircleAction(
+    String circleId, {
+    required Future<void> Function() action,
+    required String successMessage,
+  }) async {
+    setState(() => _busyCircleIds.add(circleId));
+    try {
+      await action();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(successMessage)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unable to update this family. Please try again.'),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _busyCircleIds.remove(circleId));
+      }
+    }
+  }
+
+  Widget _familyCard(CircleModel circle) {
+    final currentUserId = ref.read(authControllerProvider).user?.id;
+    final isOwner = currentUserId == circle.ownerId;
+    final isBusy = _busyCircleIds.contains(circle.id);
+
+    return Card(
+      child: Column(
+        children: [
+          ListTile(
+            leading: const CircleAvatar(child: Icon(Icons.groups)),
+            title: Text(circle.name),
+            subtitle: Text(
+              'Invite code: ${circle.inviteCode}\n'
+              '${isOwner ? 'You are the owner' : 'You are a member'}',
+            ),
+            isThreeLine: true,
+            trailing: const Icon(Icons.chevron_right),
+            onTap: isBusy ? null : () => _openMembers(circle),
+          ),
+          const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextButton.icon(
+                    onPressed:
+                        isBusy ? null : () => _openMembers(circle),
+                    icon: const Icon(Icons.people_outline),
+                    label: const Text('Members'),
+                  ),
+                ),
+                Expanded(
+                  child: TextButton.icon(
+                    onPressed: isBusy
+                        ? null
+                        : () => isOwner
+                            ? _confirmDeleteCircle(circle)
+                            : _confirmLeaveCircle(circle),
+                    icon: isBusy
+                        ? const SizedBox.square(
+                            dimension: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Icon(
+                            isOwner
+                                ? Icons.delete_outline
+                                : Icons.logout,
+                          ),
+                    label: Text(
+                      isOwner ? 'Delete family' : 'Leave family',
+                    ),
+                    style: TextButton.styleFrom(
+                      foregroundColor:
+                          Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -281,36 +526,29 @@ class _CirclesScreenState extends ConsumerState<CirclesScreen> {
                 ),
                 const SizedBox(height: 8),
                 for (final circle in items)
-                  Card(
-                    child: ListTile(
-                      leading: const CircleAvatar(child: Icon(Icons.groups)),
-                      title: Text(circle.name),
-                      subtitle: Text('Invite code: ${circle.inviteCode}'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => _openMembers(circle.id),
-                    ),
-                  ),
+                  _familyCard(circle),
                 const SizedBox(height: 16),
               ],
-              if (items.isEmpty) ...[
-                FilledButton.icon(
-                  onPressed: _openCreateDialog,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Create family'),
+              FilledButton.icon(
+                onPressed: _openCreateDialog,
+                icon: const Icon(Icons.add),
+                label: Text(
+                  items.isEmpty ? 'Create family' : 'Add new family',
                 ),
-                const SizedBox(height: 10),
-                OutlinedButton.icon(
-                  onPressed: _openJoinDialog,
-                  icon: const Icon(Icons.group_add_outlined),
-                  label: const Text('Join with invite code'),
-                ),
-              ] else
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: _openJoinDialog,
+                icon: const Icon(Icons.group_add_outlined),
+                label: const Text('Join with invite code'),
+              ),
+              if (items.isNotEmpty)
                 const Card(
                   child: ListTile(
                     leading: Icon(Icons.lock_outline),
-                    title: Text('Your family is private'),
+                    title: Text('Your families are private'),
                     subtitle: Text(
-                      'To add someone, share the invite code shown above.',
+                      'Only accepted members can see shared locations.',
                     ),
                   ),
                 ),

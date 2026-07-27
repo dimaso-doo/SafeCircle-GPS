@@ -48,13 +48,16 @@ class CircleController {
     }
 
     final repository = ref.read(circleRepositoryProvider);
-    await repository.createCircle(ownerId: user.id, name: name);
+    final circleId =
+        await repository.createCircle(ownerId: user.id, name: name);
+    ref.read(selectedCircleIdProvider.notifier).state = circleId;
     ref.invalidate(circlesProvider);
   }
 
   Future<void> joinCircle(String inviteCode) async {
     final repository = ref.read(circleRepositoryProvider);
     final existingCircles = await ref.read(circlesProvider.future);
+    final existingIds = existingCircles.map((circle) => circle.id).toSet();
     final subscription = await ref.read(subscriptionStateProvider.future);
     if (!subscription.canCreateOrJoinCircle(existingCircles.length)) {
       throw StateError(
@@ -64,6 +67,13 @@ class CircleController {
 
     await repository.joinCircleByInviteCode(inviteCode);
     ref.invalidate(circlesProvider);
+    final updatedCircles = await ref.read(circlesProvider.future);
+    final joinedCircle = updatedCircles
+        .where((circle) => !existingIds.contains(circle.id))
+        .firstOrNull;
+    if (joinedCircle != null) {
+      ref.read(selectedCircleIdProvider.notifier).state = joinedCircle.id;
+    }
   }
 
   Future<void> refreshInviteCode(String circleId) async {
@@ -72,10 +82,55 @@ class CircleController {
     ref.invalidate(circlesProvider);
   }
 
+  Future<void> deleteCircle(String circleId) async {
+    final user = ref.read(authControllerProvider).user;
+    if (user == null) return;
+
+    await ref.read(circleRepositoryProvider).deleteCircle(
+          circleId: circleId,
+          requesterId: user.id,
+        );
+    _refreshAfterMembershipChange(circleId);
+  }
+
+  Future<void> leaveCircle(String circleId) async {
+    final user = ref.read(authControllerProvider).user;
+    if (user == null) return;
+
+    await ref.read(circleRepositoryProvider).leaveCircle(
+          circleId: circleId,
+          userId: user.id,
+        );
+    _refreshAfterMembershipChange(circleId);
+  }
+
+  Future<void> removeMember({
+    required String circleId,
+    required String memberUserId,
+  }) async {
+    final user = ref.read(authControllerProvider).user;
+    if (user == null) return;
+
+    await ref.read(circleRepositoryProvider).removeMember(
+          circleId: circleId,
+          memberUserId: memberUserId,
+          requesterId: user.id,
+        );
+    ref.invalidate(circleMembersProvider(circleId));
+  }
+
   void openCircle(String? circleId) {
     ref.read(selectedCircleIdProvider.notifier).state = circleId;
     if (circleId != null) {
       ref.invalidate(circleMembersProvider(circleId));
     }
+  }
+
+  void _refreshAfterMembershipChange(String circleId) {
+    if (ref.read(selectedCircleIdProvider) == circleId) {
+      ref.read(selectedCircleIdProvider.notifier).state = null;
+    }
+    ref.invalidate(circleMembersProvider(circleId));
+    ref.invalidate(circlesProvider);
   }
 }

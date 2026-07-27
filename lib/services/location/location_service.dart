@@ -83,7 +83,6 @@ class LocationService {
         accuracy: LocationAccuracy.best,
         distanceFilter: distanceFilter,
         intervalDuration: interval,
-        timeLimit: const Duration(seconds: 20),
         foregroundNotificationConfig: backgroundEnabled
             ? const ForegroundNotificationConfig(
                 notificationTitle: 'KinOrbit is tracking',
@@ -109,7 +108,6 @@ class LocationService {
     return LocationSettings(
       accuracy: LocationAccuracy.best,
       distanceFilter: distanceFilter,
-      timeLimit: const Duration(seconds: 20),
     );
   }
 

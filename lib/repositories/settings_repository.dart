@@ -29,8 +29,8 @@ class SettingsRepository {
             'is_sharing_enabled': false,
             'is_paused': false,
             'is_background_sharing_enabled': false,
-            'update_interval_seconds': 30,
-            'distance_filter_meters': 100,
+            'update_interval_seconds': 10,
+            'distance_filter_meters': 10,
             'is_battery_saving_mode': false,
             'history_retention_hours': 24,
           })
