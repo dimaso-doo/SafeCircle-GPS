@@ -12,10 +12,8 @@ import '../../../core/widgets/empty_states.dart';
 import '../../../features/auth/providers/auth_provider.dart';
 import '../../../features/circles/models/circle_member.dart';
 import '../../../features/history/providers/history_provider.dart';
-import '../../../features/safe_zones/providers/safe_zone_provider.dart';
 import '../../../models/location_update.dart';
 import '../../../models/location_sharing_settings.dart';
-import '../../../models/safe_zone.dart';
 import '../../../services/location/location_service.dart';
 import '../../../features/settings/providers/settings_provider.dart';
 import '../../../features/notifications/providers/notification_provider.dart';
@@ -42,11 +40,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   bool _isStartingLocationStream = false;
   bool _isShareActionRunning = false;
   DateTime? _lastUploadAt;
-  List<SafeZone> _safeZones = const <SafeZone>[];
-
-  final Map<String, _SafeZoneRuntimeState> _safeZoneStates = {};
-  static const Duration _safeZoneDebounce = Duration(seconds: 20);
-  static const Duration _safeZoneEventCooldown = Duration(minutes: 2);
 
   StreamSubscription<Position>? _shareSubscription;
   Timer? _demoShareTimer;
@@ -73,7 +66,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final canShareMembership = ref.watch(canShareLocationProvider);
     final activeCircleId = ref.watch(activeMapCircleIdProvider);
     final membersState = ref.watch(activeMapMembersProvider);
-    final safeZonesState = ref.watch(safeZonesForActiveCircleProvider);
 
     if (!permissionState.hasValue ||
         permissionState.valueOrNull != LocationPermissionState.granted) {
@@ -93,12 +85,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       _syncCircleContext(activeCircleId, members);
     });
 
-    safeZonesState.whenData((zones) {
-      _safeZones = zones.where((zone) => zone.isActive).toList(growable: false);
-      final zoneIds = _safeZones.map((zone) => zone.id).toSet();
-      _safeZoneStates.removeWhere((zoneId, _) => !zoneIds.contains(zoneId));
-    });
-
     return Scaffold(
       appBar: AppBar(title: const Text('Map')),
       body: membersState.when(
@@ -107,7 +93,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           settingsState,
           canShareMembership,
           members,
-          safeZonesState.valueOrNull ?? const <SafeZone>[],
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => ErrorState(message: error.toString()),
@@ -133,7 +118,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       setState(() {
         _memberLocations.clear();
       });
-      _safeZoneStates.clear();
       return;
     }
 
@@ -377,11 +361,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
           final batteryLevel = await service.batteryLevel();
           if (mounted) {
-            await _handleSafeZoneTransitions(
-              user.id,
-              position,
-              eventTime: now,
-            );
           }
           await repository.uploadLocationUpdate(
             userId: user.id,
@@ -451,8 +430,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           return;
         }
 
-        await _handleSafeZoneTransitions(userId, position, eventTime: now);
-
         await repository.uploadLocationUpdate(
           userId: userId,
           position: position,
@@ -504,86 +481,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
   }
 
-  Future<void> _handleSafeZoneTransitions(
-    String userId,
-    Position position, {
-    required DateTime eventTime,
-  }) async {
-    if (_activeCircleId == null) return;
-
-    final relevantZones = _safeZones
-        .where((zone) => zone.appliesToAllMembers || zone.targetUserId == userId)
-        .toList(growable: false);
-    if (relevantZones.isEmpty) return;
-
-    for (final zone in relevantZones) {
-      final distanceMeters = Geolocator.distanceBetween(
-        position.latitude,
-        position.longitude,
-        zone.centerLatitude,
-        zone.centerLongitude,
-      );
-      final isInside = distanceMeters <= zone.radiusMeters;
-      final state = _safeZoneStates.putIfAbsent(zone.id, _SafeZoneRuntimeState.new);
-
-      if (state.lastKnownInside == null) {
-        state.lastKnownInside = isInside;
-        continue;
-      }
-
-      if (state.lastKnownInside == isInside) {
-        state.pendingInside = null;
-        state.pendingSince = null;
-        continue;
-      }
-
-      if (state.pendingInside != isInside) {
-        state.pendingInside = isInside;
-        state.pendingSince = eventTime;
-        continue;
-      }
-
-      if (eventTime.difference(state.pendingSince ?? eventTime) < _safeZoneDebounce) {
-        continue;
-      }
-
-      if (state.lastEventAt != null &&
-          eventTime.difference(state.lastEventAt!) < _safeZoneEventCooldown) {
-        continue;
-      }
-
-      final eventType = isInside ? 'enter' : 'exit';
-      state.lastKnownInside = isInside;
-      state.pendingInside = null;
-      state.pendingSince = null;
-      state.lastEventAt = eventTime;
-
-      try {
-        await ref.read(safeZoneControllerProvider).logZoneEvent(
-          zoneId: zone.id,
-          userId: userId,
-          eventType: eventType,
-          eventTimestamp: eventTime,
-        );
-        await ref.read(safeCircleNotificationControllerProvider).notifySafeZoneTransition(
-              circleId: _activeCircleId!,
-              zoneId: zone.id,
-              zoneName: zone.name,
-              isEnter: isInside,
-              latitude: position.latitude,
-              longitude: position.longitude,
-            );
-      } catch (_) {}
-
-      if (mounted) {
-        _showSnack(
-          context,
-          _zoneMessage(zone.name, eventType),
-        );
-      }
-    }
-  }
-
   Future<void> _stopTrackingStream() async {
     _demoShareTimer?.cancel();
     _demoShareTimer = null;
@@ -608,7 +505,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     AsyncValue<LocationSharingSettings> settingsState,
     AsyncValue<bool> canShareMembership,
     List<CircleMember> members,
-    List<SafeZone> safeZones,
   ) {
     if (positionState.isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -670,7 +566,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           _sharingControls(settings)
         else
           _sharingSetupControls(pendingSharingIntent),
-        Expanded(child: _memberMap(position, members, safeZones)),
+        Expanded(child: _memberMap(position, members)),
       ],
     );
   }
@@ -791,14 +687,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   Widget _memberMap(
     Position? currentPosition,
     List<CircleMember> members,
-    List<SafeZone> safeZones,
   ) {
     if (!AppConfig.hasGoogleMapsConfig) {
       return _mapPreviewWithoutApiKey(currentPosition, members);
     }
 
     final markers = _buildMarkers(currentPosition, members);
-    final safeZoneCircles = _buildSafeZoneCircles(safeZones);
     final currentUserId = ref.read(authControllerProvider).user?.id;
     final currentMarkerId =
         currentUserId != null && _memberLocations.containsKey(currentUserId)
@@ -828,7 +722,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       myLocationEnabled: true,
       myLocationButtonEnabled: true,
       markers: markers,
-      circles: safeZoneCircles,
     );
   }
 
@@ -953,32 +846,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     );
   }
 
-  Set<Circle> _buildSafeZoneCircles(List<SafeZone> safeZones) {
-    final currentUserId = ref.read(authControllerProvider).user?.id;
-
-    return safeZones
-        .where((zone) => zone.isActive)
-        .where((zone) => zone.radiusMeters > 0)
-        .map(
-          (zone) => Circle(
-            circleId: CircleId(zone.id),
-            center: LatLng(zone.centerLatitude, zone.centerLongitude),
-            radius: zone.radiusMeters.toDouble(),
-            strokeWidth: 2,
-            strokeColor: (zone.appliesToAllMembers ||
-                    (currentUserId != null && zone.targetUserId == currentUserId))
-                ? Colors.green
-                : Colors.orange,
-            fillColor: (zone.appliesToAllMembers ||
-                    (currentUserId != null && zone.targetUserId == currentUserId))
-                ? Colors.green.withOpacity(0.10)
-                : Colors.orange.withOpacity(0.10),
-            consumeTapEvents: true,
-          ),
-        )
-        .toSet();
-  }
-
   Set<Marker> _buildMarkers(Position? currentPosition, List<CircleMember> members) {
     final markers = <Marker>{};
     final memberById = {for (final member in members) member.userId: member};
@@ -1042,11 +909,4 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
-}
-
-class _SafeZoneRuntimeState {
-  bool? lastKnownInside;
-  bool? pendingInside;
-  DateTime? pendingSince;
-  DateTime? lastEventAt;
 }

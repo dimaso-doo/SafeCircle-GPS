@@ -7,7 +7,6 @@ import '../../../models/circle.dart';
 import '../../history/ui/history_screen.dart';
 import '../../map/providers/map_provider.dart';
 import '../../notifications/providers/notification_provider.dart';
-import '../../safe_zones/ui/safe_zones_screen.dart';
 import '../providers/circle_providers.dart';
 
 class CirclesScreen extends ConsumerStatefulWidget {
@@ -570,18 +569,6 @@ class _CirclesScreenState extends ConsumerState<CirclesScreen> {
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (_) => const HistoryScreen(),
-                          ),
-                        ),
-                      ),
-                      const Divider(height: 1),
-                      ListTile(
-                        leading: const Icon(Icons.shield_outlined),
-                        title: const Text('Safe zones'),
-                        subtitle: const Text('Manage home, school and other family places.'),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const SafeZonesScreen(),
                           ),
                         ),
                       ),

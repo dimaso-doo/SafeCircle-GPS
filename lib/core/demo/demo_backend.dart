@@ -887,11 +887,11 @@ class DemoBackend {
       slug: 'free',
       name: 'Free',
       maxCircles: 1,
-      maxMembersPerCircle: 2,
+      maxMembersPerCircle: 3,
       maxHistoryRetentionHours: 24,
       allowSafeZones: false,
       allowSos: false,
-      allowPriorityUpdates: false,
+      allowPriorityUpdates: true,
     );
     _subscriptionByUser[userId] = UserSubscriptionState.fromJson({
       'id': 'sub-demo-${userId}',

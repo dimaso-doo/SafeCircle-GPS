@@ -30,7 +30,7 @@ and Google Play release.
 Firebase Cloud Messaging is wired end-to-end:
 
 - App registers FCM token after user grants notification permission.
-- SOS, safe zone, and sharing-paused alerts are sent through Supabase Edge Function fan-out.
+- Sharing-paused alerts are sent through Supabase Edge Function fan-out.
 - Recipients are filtered by circle membership and per-user notification preferences.
 
 ## Project structure
@@ -40,7 +40,6 @@ Firebase Cloud Messaging is wired end-to-end:
   - `auth/` name-only onboarding and persistent device session
   - `map/` map screen + permission gate + realtime markers
   - `circles/` family circles, member list, invite code flow
-  - `safe_zones/` create/edit/delete zones, assignments, geofence UI
   - `history/` your own history
   - `settings/` sharing controls + privacy settings
 - `lib/models/` typed domain models
@@ -209,7 +208,13 @@ supabase functions deploy safe-circle-notify
   - `select cron.schedule('safe_circle_cleanup_locations', '0 * * * *', 'select public.delete_expired_location_updates();');`
 - Run on a schedule approved by your compliance/security review.
 
-## Safe zones (geofencing)
+## Legacy safe-zone data
+
+Safe Zones are no longer part of the KinOrbit product. Existing database
+tables and migrations remain in place so old data is not deleted during an
+upgrade, but the current app does not display zones or run geofence detection.
+
+<!--
 
 - Open **Zones** from the bottom navigation.
 - Create a zone by entering:
@@ -228,6 +233,7 @@ supabase functions deploy safe-circle-notify
   - only transitions after stable state change are recorded.
 - Push notifications are prepared by trigger `public.notify_safe_zone_event()` in migration
   `20260726_safe_circle_safe_zones.sql` (wire this to worker/webhook/Fn as needed).
+-->
 
 ## Permissions and background behavior
 
@@ -270,9 +276,14 @@ supabase functions deploy safe-circle-notify
 ## Freemium subscriptions
 
 - Subscription data model is implemented in `subscription_plans` and `user_subscriptions`:
-  - Free: 1 circle, 2 members per circle, 24h history.
-  - Premium: more circles/members + safe zones + SOS + priority location updates.
+  - Free: 1 family, 3 members total, live location, and 24-hour history.
+  - Family+: up to 3 families, 10 members per family, live location, and 30-day history.
+  - One Family+ subscription owned by the family creator covers that family.
+  - Live location update quality is the same on both plans.
 - Feature access is guarded in app screens and DB checks for write protection.
+
+Suggested store pricing is EUR 2.49/month or EUR 19.99/year. Actual localized
+prices are configured in App Store Connect and Google Play Console.
 
 ### Paywall configuration
 

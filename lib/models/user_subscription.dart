@@ -83,7 +83,7 @@ class UserSubscriptionState {
 
   String planDescription() {
     if (ReleaseAccess.closedTestFullAccess) return 'Closed test access';
-    if (isPremium) return 'Premium';
+    if (isPremium) return 'Family+';
     return 'Free';
   }
 
@@ -96,11 +96,11 @@ class UserSubscriptionState {
           'slug': 'free',
           'name': 'Free',
           'max_circles': 1,
-          'max_members_per_circle': 2,
+          'max_members_per_circle': 3,
           'max_history_retention_hours': 24,
           'allow_safe_zones': false,
           'allow_sos': false,
-          'allow_priority_updates': false,
+          'allow_priority_updates': true,
         };
     final plan = SubscriptionPlan.fromJson(rawPlan);
 
@@ -117,7 +117,7 @@ class UserSubscriptionState {
       maxMembersPerCircle:
           (json['max_members_per_circle'] as num?)?.toInt() ??
           (rawPlan['max_members_per_circle'] as num?)?.toInt() ??
-          2,
+          3,
       canUseSafeZones: json['allow_safe_zones'] as bool? ?? plan.allowSafeZones,
       canUseSos: json['allow_sos'] as bool? ?? plan.allowSos,
       canUsePriorityUpdates: json['allow_priority_updates'] as bool? ?? plan.allowPriorityUpdates,

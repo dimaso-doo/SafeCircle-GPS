@@ -43,7 +43,7 @@ class CircleController {
     final subscription = await ref.read(subscriptionStateProvider.future);
     if (!subscription.canCreateOrJoinCircle(existingCircles.length)) {
       throw StateError(
-        'Free plan allows ${subscription.maxCircles} circle only. Upgrade to Premium for more circles.',
+        'Your plan allows ${subscription.maxCircles} family. Upgrade to Family+ for more.',
       );
     }
 
@@ -61,7 +61,7 @@ class CircleController {
     final subscription = await ref.read(subscriptionStateProvider.future);
     if (!subscription.canCreateOrJoinCircle(existingCircles.length)) {
       throw StateError(
-        'Free plan allows ${subscription.maxCircles} accepted circle memberships. Upgrade to Premium to join more.',
+        'Your plan allows ${subscription.maxCircles} family. Upgrade to Family+ to join more.',
       );
     }
 

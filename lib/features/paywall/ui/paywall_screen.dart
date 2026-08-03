@@ -18,13 +18,14 @@ class PaywallScreen extends ConsumerWidget {
     final subscription = ref.watch(subscriptionStateProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Upgrade to Premium')),
+      appBar: AppBar(title: const Text('KinOrbit Family+')),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
             const Text(
-              'Unlock Premium for family safety features and performance.',
+              'More room for every family. Live location stays included '
+              'for everyone.',
               style: TextStyle(fontSize: 16),
             ),
             const SizedBox(height: 16),
@@ -33,19 +34,19 @@ class PaywallScreen extends ConsumerWidget {
             const Divider(),
             const SizedBox(height: 8),
             ListTile(
-              leading: const Icon(Icons.speed),
-              title: const Text('Priority live updates'),
-              subtitle: const Text('Faster location intervals and tighter movement thresholds.'),
+              leading: const Icon(Icons.family_restroom_outlined),
+              title: const Text('Up to 3 families'),
+              subtitle: const Text('Keep separate family groups in one account.'),
             ),
             ListTile(
-              leading: const Icon(Icons.location_on),
-              title: const Text('Safe zones + alerts'),
-              subtitle: const Text('Geofences, zone events, and SOS event workflow.'),
+              leading: const Icon(Icons.groups_outlined),
+              title: const Text('Up to 10 members per family'),
+              subtitle: const Text('One owner subscription covers the whole family.'),
             ),
             ListTile(
               leading: const Icon(Icons.history),
-              title: const Text('Extended location history'),
-              subtitle: const Text('Keep 7/30 day history with higher-tier retention.'),
+              title: const Text('30-day location history'),
+              subtitle: const Text('Live location has the same quality on every plan.'),
             ),
             const SizedBox(height: 12),
             availability.when(
@@ -83,7 +84,9 @@ class PaywallScreen extends ConsumerWidget {
         child: ListTile(
           title: Text(subscriptionState.planName),
           subtitle: Text(
-            'Current plan: ${subscriptionState.planDescription()}. Free users can manage one circle, up to 2 members, and 24h history.',
+            subscriptionState.isPremium
+                ? 'Current plan: Family+. Up to 3 families, 10 members per family, and 30-day history.'
+                : 'Current plan: Free. 1 family, 3 members, and 24-hour history. Live location is included.',
           ),
           trailing: subscriptionState.isPremium ? const Icon(Icons.star, color: Colors.orange) : null,
         ),
@@ -116,7 +119,7 @@ class PaywallScreen extends ConsumerWidget {
       ..sort((a, b) => a.rawPrice.compareTo(b.rawPrice));
 
     if (visibleProducts.isEmpty) {
-      return const EmptyState(message: 'No configured premium product IDs matched Store products.');
+      return const EmptyState(message: 'No configured Family+ product IDs matched Store products.');
     }
 
     return Column(

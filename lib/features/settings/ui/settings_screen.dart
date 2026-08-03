@@ -8,6 +8,7 @@ import '../../../core/widgets/empty_states.dart';
 import '../../../features/auth/providers/auth_provider.dart';
 import '../../../features/map/providers/map_provider.dart';
 import '../../../features/notifications/providers/notification_provider.dart';
+import '../../../features/paywall/ui/paywall_screen.dart';
 import '../../../features/settings/providers/settings_provider.dart';
 import '../../../features/subscription/providers/subscription_provider.dart';
 import '../../../models/location_sharing_settings.dart';
@@ -75,7 +76,6 @@ class _SettingsContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final canUsePriority = subscription.canUsePriorityUpdates || subscription.isPremium;
     final backgroundIsGranted = backgroundPermission.valueOrNull == true;
 
     return ListView(
@@ -87,6 +87,33 @@ class _SettingsContent extends ConsumerWidget {
           title: Text(authState.user?.displayName ?? 'KinOrbit member'),
           subtitle: const Text(
             'No email or password. This account is currently stored on this device.',
+          ),
+        ),
+        Card(
+          child: ListTile(
+            leading: Icon(
+              subscription.isPremium
+                  ? Icons.workspace_premium_outlined
+                  : Icons.family_restroom_outlined,
+            ),
+            title: Text(
+              subscription.isPremium
+                  ? 'KinOrbit Family+'
+                  : 'KinOrbit Free',
+            ),
+            subtitle: Text(
+              subscription.isPremium
+                  ? '3 families, 10 members per family and 30-day history. '
+                      'Live location is included.'
+                  : '1 family, 3 members and 24-hour history. '
+                      'Live location is always included.',
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const PaywallScreen(),
+              ),
+            ),
           ),
         ),
         const Divider(height: 24),
@@ -103,24 +130,6 @@ class _SettingsContent extends ConsumerWidget {
             }
             await controller.setPushEnabled(value);
           },
-        ),
-        SwitchListTile(
-          value: notificationData.notifySafeZoneEnter,
-          title: const Text('Safe zone entered'),
-          subtitle: const Text('Receive alerts when a member enters a safe zone.'),
-          onChanged: notificationData.pushEnabled
-              ? (value) =>
-                  ref.read(safeCircleNotificationControllerProvider).setNotifySafeZoneEnter(value)
-              : null,
-        ),
-        SwitchListTile(
-          value: notificationData.notifySafeZoneExit,
-          title: const Text('Safe zone exited'),
-          subtitle: const Text('Receive alerts when a member leaves a safe zone.'),
-          onChanged: notificationData.pushEnabled
-              ? (value) =>
-                  ref.read(safeCircleNotificationControllerProvider).setNotifySafeZoneExit(value)
-              : null,
         ),
         const Divider(height: 24),
         _sectionTitle('Background location sharing'),
@@ -171,18 +180,13 @@ class _SettingsContent extends ConsumerWidget {
           trailing: SizedBox(
             width: 180,
             child: Slider.adaptive(
-              min: canUsePriority
-                  ? 10
-                  : subscription.minFreeUpdateIntervalSeconds.toDouble(),
+              min: 10,
               max: 300,
-              divisions: canUsePriority ? 29 : 27,
+              divisions: 29,
               value: settings.updateIntervalSeconds
-                  .clamp(
-                    canUsePriority ? 10 : subscription.minFreeUpdateIntervalSeconds,
-                    300,
-                  )
+                  .clamp(10, 300)
                   .toDouble(),
-              label: '${settings.updateIntervalSeconds.clamp(canUsePriority ? 10 : subscription.minFreeUpdateIntervalSeconds, 300)}s',
+              label: '${settings.updateIntervalSeconds.clamp(10, 300)}s',
               onChanged: (value) =>
                   ref.read(settingsControllerProvider).setUpdateInterval(value.toInt()),
             ),
@@ -194,16 +198,11 @@ class _SettingsContent extends ConsumerWidget {
           trailing: SizedBox(
             width: 180,
             child: Slider.adaptive(
-              min: canUsePriority
-                  ? 10
-                  : subscription.minFreeDistanceFilterMeters.toDouble(),
+              min: 10,
               max: 1000,
-              divisions: canUsePriority ? 99 : 90,
-              value: settings.distanceFilterMeters.clamp(
-                canUsePriority ? 10 : subscription.minFreeDistanceFilterMeters,
-                1000,
-              ).toDouble(),
-              label: '${settings.distanceFilterMeters.clamp(canUsePriority ? 10 : subscription.minFreeDistanceFilterMeters, 1000)}m',
+              divisions: 99,
+              value: settings.distanceFilterMeters.clamp(10, 1000).toDouble(),
+              label: '${settings.distanceFilterMeters.clamp(10, 1000)}m',
               onChanged: (value) => ref
                   .read(settingsControllerProvider)
                   .setDistanceFilter(value.toInt().clamp(10, 1000)),
@@ -225,8 +224,10 @@ class _SettingsContent extends ConsumerWidget {
         _sectionTitle('History'),
         ListTile(
           title: const Text('Local history retention'),
-          subtitle: const Text(
-            'Recent family history is kept for 24 hours in the current version.',
+          subtitle: Text(
+            subscription.isPremium
+                ? 'Family history is kept for up to 30 days.'
+                : 'Recent family history is kept for 24 hours.',
           ),
         ),
         const Divider(height: 24),
@@ -267,8 +268,8 @@ class _SettingsContent extends ConsumerWidget {
                     builder: (dialogContext) => AlertDialog(
                       title: const Text('Delete account permanently?'),
                       content: const Text(
-                        'This permanently removes your profile, circle data, '
-                        'location history, safe zones, and sharing settings. '
+                        'This permanently removes your profile, family data, '
+                        'location history, and sharing settings. '
                         'This action cannot be undone.',
                       ),
                       actions: [
