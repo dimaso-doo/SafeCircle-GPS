@@ -1,11 +1,26 @@
 # KinOrbit (Flutter + Supabase MVP)
 
+## Google Play
+
+https://play.google.com/store/apps/details?id=com.safecircle.gps
+
+## Product
+
+KinOrbit is a privacy-first family location-sharing application with private circles, permission-aware sharing, realtime updates, location history, notifications and SOS controls.
+
+## My role
+
+I defined the product concept, core user journeys, privacy and permission behavior, directed AI-assisted implementation, reviewed integrations, performed Android QA and managed the Google Play release.
+
+## Stack
+
+Flutter, Riverpod, Supabase Auth/PostgreSQL/Realtime/RLS, Firebase Cloud Messaging and Google Maps.
+
 KinOrbit is a privacy-first family location sharing app. This branch now includes name-only anonymous authentication, circle-based sharing, live foreground sharing, and optional background sharing controls.
 
-The public product name is **KinOrbit**. Existing identifiers such as
-`com.safecircle.gps`, the Supabase project name, and Firebase project ID remain
-unchanged to preserve compatibility with the already configured infrastructure
-and Google Play release.
+The public product name is **KinOrbit**. Existing application and backend
+identifiers remain unchanged to preserve compatibility with the configured
+infrastructure and Google Play release.
 
 ## Demo-ready setup
 
@@ -62,15 +77,10 @@ cp .env.example .env
 
 3. Configure backend credentials in `.env` or use `--dart-define`.
 
-This repository is currently linked to the dedicated Supabase project `SafeCircle GPS`:
-
-- `SUPABASE_URL=https://bwiihydbnoroaiqpglco.supabase.co`
-- `SUPABASE_ANON_KEY` is prefilled in `/Users/home/Documents/GPS_Track_Mobile_APP/.env`
-
 Example `.env` values:
 
 ```env
-SUPABASE_URL=https://bwiihydbnoroaiqpglco.supabase.co
+SUPABASE_URL=https://your-project-ref.supabase.co
 SUPABASE_ANON_KEY=sb_publishable_your-key
 GOOGLE_MAPS_ANDROID_API_KEY=android_maps_key
 GOOGLE_MAPS_IOS_API_KEY=ios_maps_key
@@ -115,12 +125,12 @@ flutter run -d ios
 supabase db push
 ```
 
-The SafeCircle migrations and RLS policies are applied to project
-`bwiihydbnoroaiqpglco`.
+The migrations and RLS policies must be applied to the configured Supabase
+project.
 
 ### Supabase anonymous authentication
 
-- Anonymous sign-ins are enabled for project `bwiihydbnoroaiqpglco`.
+- Anonymous sign-ins must be enabled for the configured Supabase project.
 - The client stores only the chosen display name in user metadata.
 - Every account still receives a unique `auth.uid()` and uses the existing RLS
   circle-membership policies.
@@ -131,13 +141,12 @@ The SafeCircle migrations and RLS policies are applied to project
 
 ### Google Maps setup
 
-- Billing account is linked to Google Cloud project `safecircle-gps`.
 - `Maps SDK for Android` and `Maps SDK for iOS` are enabled.
-- `SafeCircle Maps Android` is restricted to:
+- The Android key must be restricted to:
   - API: Maps SDK for Android
   - package: `com.safecircle.gps`
-  - debug SHA-1: `67:4C:04:00:8A:C8:3C:AF:D4:6D:AC:13:D1:54:46:76:52:B3:A1:7B`
-- `SafeCircle Maps iOS` is restricted to:
+  - the appropriate signing-certificate SHA-1 fingerprint
+- The iOS key must be restricted to:
   - API: Maps SDK for iOS
   - bundle ID: `com.safecircle.gps`
 - Real key values remain only in ignored local files `.env` and
@@ -145,7 +154,7 @@ The SafeCircle migrations and RLS policies are applied to project
 
 ### Push notifications and SOS setup
 
-Firebase project `safecircle-gps` is registered for both platforms:
+Firebase Cloud Messaging is registered for both platforms:
 
 - Android package: `com.safecircle.gps`
 - iOS bundle ID: `com.safecircle.gps`
